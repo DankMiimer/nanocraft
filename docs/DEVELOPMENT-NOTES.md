@@ -10,12 +10,12 @@ comes from the owner's own APK.
 
 ## Status in one paragraph
 
-MCPE 0.8.1 **runs in a world on the RG Nano at 8.2 fps, native 240x240**,
-packaged as an OPK that appears as **Minecraft PE** in the Games menu. Controls
-are owner-verified. An in-game quick menu (volume, brightness, close, shutdown,
-resume) is written, renders correctly and has been seen working on hardware.
-**One open bug**: the game can end up orphaned with no `run.sh`, which silently
-disables the power button and the keymap restore. See *Open bugs*.
+**Shipped.** MCPE 0.8.1 runs in a world on the RG Nano at **7.8 fps, native
+240x240**, released as **NanoCraft v1.0.0** —
+https://github.com/DankMiimer/nanocraft. Controls are owner-verified, the
+in-game quick menu works on **L+SELECT**, and the release was installed onto a
+wiped console from its own archive and verified file-by-file against what is on
+the device. Bedrock on this console is **parked**; see below.
 
 ## Device access
 
@@ -47,6 +47,8 @@ Its busybox `tar` has **no `-z`**, hence the separate `gunzip`.
 /mnt/Native games/NanoCraft_funkey-s.opk   the package (+ .png beside it)
 
 nano/opk-pe/                      OPK sources; pack-pe-opk.sh builds it
+nano/release/                     the published archive + build-archive.sh
+nano/nanocraft/                   the public repo tree (build-nanocraft-repo.sh)
 nano/src/                         same scripts, plus the remote-driving rig
 nano/pe081/                       scratch: session logs, screenshots, replays
 ```
@@ -199,6 +201,23 @@ resolutions**; replay in-world segments only.
 `mkreplay.py` turns them back into an injectable script. `session1.log` and
 `session-bench.rep` in `nano/pe081/` are a real 14-minute session and the
 112-second window used for the A/B above.
+
+## Bedrock on this console is parked
+
+`README.md`, `DELTAS.md` and `PORT-PLAN.md` in this directory describe the
+**Bedrock** effort, which is **not being pursued** as of 2026-09-01. It reached
+a world at 2.2 fps and crashed after ~75 s, and its own profiling explains why:
+86% of every frame is the game's CPU work on one core, which no renderer or
+resolution change reaches.
+
+Treat those three files as **reference, not a to-do list**. They are still the
+best account of the glibc-loader route, the RGB565 presenter and the llvmpipe
+finding — all of which are what made Pocket Edition work. `nano-swap.sh`,
+`inject_nano_input.py` and the `out-client-*` trees belong to that effort.
+
+The console also still carries ~1.1 GB of Bedrock payload at
+`/mnt/FunKey/minecraftnano/` (a 512 MB swap file, a 202 MB extracted game and
+307 MB of version downloads). NanoCraft does not use any of it.
 
 ## Suggested next steps
 

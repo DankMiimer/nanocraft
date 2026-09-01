@@ -88,6 +88,34 @@ at your own risk. The setting persists until reboot, so set it once and launch.
 - About **300 MB free** on the card.
 - **Your own Pocket Edition 0.8.1 APK**, 32-bit `armeabi-v7a`.
 
+## Might it run on a FunKey S? Probably — untested
+
+I only own an RG Nano, so **this is reasoning, not a report.** Take it as a
+starting point rather than a claim.
+
+The FunKey S is the console DrUm78's OS was originally built for, and the two
+are close enough that most of this port should not care which one it is on:
+
+- **Same OS** — FunKey-OS, the same `fkgpiod`, GMenu2X and `opkrun`. NanoCraft's
+  package is even named `.funkey-s.desktop`, because that is the suffix this OS
+  wants on both.
+- **Same screen geometry** — 240x240. The RGB565 framebuffer presenter and the
+  240x240 quick-menu background would need no changes.
+- **Same SoC family and RAM class** — Allwinner V3s, 64 MB. Nothing here assumes
+  more than the Nano has.
+
+What I would expect to check first:
+
+- **Buttons.** `opk/minecraft.key` maps `MENU` and `FN` as distinct inputs, and
+  the whole control scheme leans on `L` as a modifier. If a FunKey S does not
+  expose the same set, that file is where you would fix it — it is plain text,
+  and `keymap save` tells you what actually got stored.
+- **Frame rate.** If its clock differs from the Nano's 1008 MHz, expect the
+  8 fps figure to scale roughly with it. Everything here is CPU-bound.
+
+If you try it, I would genuinely like to know either way — open an issue with
+what happened.
+
 ## Install
 
 See **[INSTALL.md](INSTALL.md)**. In short: copy the `.opk` into

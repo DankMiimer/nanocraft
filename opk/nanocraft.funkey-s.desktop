@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=NanoCraft
+Comment=Minecraft Pocket Edition 0.8.1
+Exec=run.sh
+Icon=nanocraft
+Categories=games
+Terminal=false
+StartupNotify=true

@@ -1,0 +1,361 @@
+diff --git a/ninecraft/src/main.c b/ninecraft/src/main.c
+index 81bc733..2b7b095 100644
+--- a/ninecraft/src/main.c
++++ b/ninecraft/src/main.c
+@@ -26,6 +26,7 @@
+ #include <ninecraft/input/keyboard.h>
+ #include <ninecraft/input/mouse_device.h>
+ #include <ninecraft/input/multitouch.h>
++#include <ninecraft/input/miyoo_input.h>
+ #include <ninecraft/mods/inject.h>
+ #include <ninecraft/mods/mod_loader.h>
+ #include <ninecraft/app_platform.h>
+@@ -58,6 +59,26 @@ bool ctrl_pressed = false;
+ bool is_fullscreen = false;
+ 
+ int version_id = 0;
++static bool version_0_11_0_build_1 = false;
++
++/* Ninecraft's MINECRAFTCLIENT_SCREEN_OFFSET_0_11_0 (0x4c) is the prerelease
++ * layout.  Disassembling MinecraftClient::setSize in the retail
++ * "v0.11.0 alpha build 1" library shows it loading its current screen from
++ * this+0x50 before calling Screen::setSize, so the stable build sits one word
++ * further along. */
++#define MINECRAFTCLIENT_SCREEN_OFFSET_0_11_0_BUILD_1 0x50
++
++/* Likewise MINECRAFTCLIENT_ISGRABBED_OFFSET_0_11_0 (0x54) is the prerelease
++ * layout.  In the retail library MinecraftClient::grabMouse stores to this+0x58
++ * and releaseMouse reads and clears the same byte.  Reading 0x54 lands on a
++ * neighbouring member that is non-zero, so the game looks permanently grabbed:
++ * the virtual cursor is never drawn, the D-pad never moves it, and A/B never
++ * emit clicks. */
++#define MINECRAFTCLIENT_ISGRABBED_OFFSET_0_11_0_BUILD_1 0x58
++
++/* Screen::setSize stores width at +0x40 and height at +0x44. */
++#define SCREEN_WIDTH_INDEX  16
++#define SCREEN_HEIGHT_INDEX 17
+ 
+ void *ninecraft_app;
+ AppPlatform_linux platform;
+@@ -68,6 +89,13 @@ static float *controller_y_stick;
+ 
+ bool mouse_pointer_hidden = false;
+ 
++static int environment_dimension(const char *name, int fallback) {
++    const char *value = getenv(name);
++    if (!value || !*value) return fallback;
++    int parsed = atoi(value);
++    return parsed >= 64 && parsed <= 1920 ? parsed : fallback;
++}
++
+ void *load_library(const char *name) {
+ #if defined(__i386__) || defined(_M_IX86)
+     char *arch = "x86";
+@@ -152,6 +180,18 @@ static void mouse_click_callback(struct SDL_Window *window, int button, int acti
+     } else {
+         int game_keycode = mouseToGameKeyCode(button);
+ 
++        /* 0.6.x gameplay polls Mouse::isButtonDown for use/place instead of
++         * consuming the desktop MCKEY_USE event used by later versions.
++         * Keep feeding the key as well so this remains compatible with every
++         * version that already worked through Ninecraft's desktop path. */
++        if (version_id >= version_id_0_6_0 &&
++                button == SDL_BUTTON_RIGHT) {
++            mouse_device_feed_0_6(
++                android_dlsym(handle, "_ZN5Mouse9_instanceE"),
++                2, (char)(action == SDL_PRESSED ? 1 : 0),
++                (short)x, (short)y, 0, 0);
++        }
++
+         if (action == SDL_PRESSED) {
+             keyboard_feed(game_keycode, 1);
+         } else if (action == SDL_RELEASED) {
+@@ -633,8 +673,19 @@ float calculate_scale(int width, int height, float dpi) {
+ }
+ 
+ static void set_ninecraft_size(int width, int height) {
++    float ddpi = 96.0f;
++    SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(_window), &ddpi, NULL, NULL);
++    float scale = calculate_scale(width, height, ddpi);
++
+     if (version_id >= version_id_0_10_0) {
+-        minecraft_client_set_size(ninecraft_app, width, height, 2.f);
++        /* The stable 0.11.0 build lays its interface out from the pixel scale
++         * passed here, while Ninecraft overwrites Gui::GuiScale below with
++         * calculate_scale().  Hardcoding 2.f leaves the two disagreeing, and
++         * the whole GUI is then laid out into a quarter of the viewport with
++         * the logo and buttons falling outside it.  Hand this build the same
++         * scale we are about to install. */
++        minecraft_client_set_size(ninecraft_app, width, height,
++                                  version_0_11_0_build_1 ? scale : 2.f);
+     } else {
+         minecraft_set_size(ninecraft_app, width, height);
+     }
+@@ -688,17 +739,48 @@ static void set_ninecraft_size(int width, int height) {
+     } else {
+         return;
+     }
+-    float ddpi = 96.0f;
+-    SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(_window), &ddpi, NULL, NULL);
+-    float scale = calculate_scale(width, height, ddpi);
+     *(float *)android_dlsym(handle, "_ZN3Gui11InvGuiScaleE") = 1.0f / scale;
+     *(float *)android_dlsym(handle, "_ZN3Gui8GuiScaleE") = scale;
++    if (version_0_11_0_build_1) {
++        /* Reading the prerelease 0x4c offset yields a bogus pointer and used to
++         * segfault, so this returned early.  The cost was that Screen::setSize
++         * never ran, and with it the relayout virtual it invokes, leaving the
++         * title screen laid out for something other than the real viewport. */
++        screen_offset = MINECRAFTCLIENT_SCREEN_OFFSET_0_11_0_BUILD_1;
++    }
+     void *screen = *(void **)((char *)ninecraft_app + screen_offset);
+     if (screen) {
+         ((void (*)(void *, int, int))android_dlsym(handle, "_ZN6Screen7setSizeEii"))(screen, width / scale, height / scale);
+     }
+ }
+ 
++static void *last_sized_screen = NULL;
++
++/* set_ninecraft_size() runs once at startup, typically before MinecraftClient
++ * has a current screen, so its Screen::setSize call does nothing. Every screen
++ * created afterwards keeps whatever size it was built with. Re-apply the real
++ * viewport size each time the current screen changes. */
++static void resize_current_screen_build_1(int width, int height) {
++    void *screen = *(void **)((char *)ninecraft_app +
++                              MINECRAFTCLIENT_SCREEN_OFFSET_0_11_0_BUILD_1);
++    if (!screen || screen == last_sized_screen) {
++        return;
++    }
++    float ddpi = 96.0f;
++    SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(_window), &ddpi, NULL, NULL);
++    float scale = calculate_scale(width, height, ddpi);
++    int want_width = (int)(width / scale);
++    int want_height = (int)(height / scale);
++    printf("[uifix] screen=%p was %dx%d -> %dx%d\n", screen,
++           ((int *)screen)[SCREEN_WIDTH_INDEX],
++           ((int *)screen)[SCREEN_HEIGHT_INDEX],
++           want_width, want_height);
++    fflush(stdout);
++    ((void (*)(void *, int, int))android_dlsym(handle, "_ZN6Screen7setSizeEii"))(
++        screen, want_width, want_height);
++    last_sized_screen = screen;
++}
++
+ static void resize_callback(struct SDL_Window *window, int width, int height) {
+     if (version_id == version_id_0_1_0) {
+         set_ninecraft_size_0_1_0(width, height);
+@@ -1296,6 +1378,9 @@ static bool detect_version() {
+             version_id = version_id_0_10_4;
+         } else if (strcmp(verstr, "v0.10.5 alpha") == 0) {
+             version_id = version_id_0_10_5;
++        } else if (strcmp(verstr, "v0.11.0 alpha build 1") == 0) {
++            version_0_11_0_build_1 = true;
++            version_id = version_id_0_11_0;
+         } else if (strcmp(verstr, "v0.11.0 alpha") == 0) {
+             version_id = version_id_0_11_0;
+         } else if (strcmp(verstr, "v0.11.1 alpha") == 0) {
+@@ -1376,6 +1461,8 @@ int main(int argc, char **argv) {
+     SDL_Event event;
+     char *minecraft_options;
+     void *icon_pixels;
++    int window_width = environment_dimension("NINECRAFT_WIDTH", 720);
++    int window_height = environment_dimension("NINECRAFT_HEIGHT", 480);
+ 
+     parse_game_parameters(argc, argv);
+ 
+@@ -1475,7 +1562,7 @@ int main(int argc, char **argv) {
+     _window = SDL_CreateWindow(
+         "Ninecraft",
+         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+-        720, 480,
++        window_width, window_height,
+         SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+     );
+     if (!_window) {
+@@ -1687,7 +1774,6 @@ int main(int argc, char **argv) {
+     } else {
+         ninecraft_app_construct(ninecraft_app);
+     }
+-
+     if (version_id <= version_id_0_10_5) {
+         uintptr_t int_off = get_ninecraftapp_internal_storage_offset(version_id);
+         uintptr_t ext_off = get_ninecraftapp_external_storage_offset(version_id);
+@@ -1701,7 +1787,6 @@ int main(int argc, char **argv) {
+     }
+ 
+     mod_loader_execute_on_minecraft_construct(ninecraft_app, version_id);
+-
+     if (version_id >= version_id_0_9_0) {
+         app_platform_0_9_0_t *plat = malloc(sizeof(app_platform_0_9_0_t));
+         app_context_0_9_0_t *context = (app_context_0_9_0_t *)malloc(sizeof(app_context_0_9_0_t));
+@@ -1756,8 +1841,46 @@ int main(int argc, char **argv) {
+             platform_vtable_0_10_0.getPixelsPerMillimeter = (void *)AppPlatform_linux$getPixelsPerMillimeter;
+             platform_vtable_0_10_0.swapBuffers = (void *)AppPlatform_linux$swapBuffers;
+         } else if (version_id >= version_id_0_11_0 && version_id <= version_id_0_11_1) {
+-            memcpy(&platform_vtable_0_11_0, plat->vtable, sizeof(app_platform_vtable_0_11_0_t));
+-            plat->vtable = (void **)&platform_vtable_0_11_0;
++            if (version_0_11_0_build_1) {
++                /* The stable Android build has 57 virtual slots and omits
++                 * savePNG, internal storage, application ID, and URI listener
++                 * entries from Ninecraft's later 0.11.x layout. */
++                void **vtable = (void **)&platform_vtable_0_11_0;
++                memcpy(vtable, plat->vtable, 57 * sizeof(void *));
++                plat->vtable = vtable;
++                vtable[2] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getImagePath);
++                vtable[3] = (void *)AppPlatform_linux$loadPNG_0_9_0;
++                vtable[4] = (void *)AppPlatform_linux$loadTGA_0_9_0;
++                vtable[6] = (void *)AppPlatform_linux$showKeyboard;
++                vtable[7] = (void *)AppPlatform_linux$hideKeyboard;
++                vtable[9] = (void *)AppPlatform_linux$swapBuffers;
++                vtable[10] = (void *)AppPlatform_linux$getSystemRegion;
++                vtable[11] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getGraphicsVendor);
++                vtable[12] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getGraphicsRenderer);
++                vtable[13] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getGraphicsVersion);
++                vtable[14] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getGraphicsExtensions);
++                vtable[15] = (void *)AppPlatform_linux$pickImage;
++                vtable[17] = (void *)AppPlatform_linux$getExternalStoragePath;
++                vtable[24] = (void *)AppPlatform_linux$getScreenWidth;
++                vtable[25] = (void *)AppPlatform_linux$getScreenHeight;
++                vtable[26] = (void *)AppPlatform_linux$getPixelsPerMillimeter;
++                vtable[30] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getLoginInformation);
++                vtable[31] = (void *)AppPlatform_linux$setLoginInformation;
++                vtable[35] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$readAssetFile_0_9_0);
++                vtable[37] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getDateString);
++                vtable[42] = (void *)AppPlatform_linux$isNetworkEnabled;
++                vtable[46] = (void *)AppPlatform_linux$supportsTouchscreen;
++                /* Retain this build's own non-pure platform-string method. */
++                vtable[49] = (void *)AppPlatform_linux$getAvailableMemory;
++                vtable[50] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getBroadcastAddresses);
++                vtable[52] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getDeviceId);
++                vtable[53] = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$createUUID);
++                vtable[54] = (void *)AppPlatform_linux$isFirstSnoopLaunch;
++                vtable[55] = (void *)AppPlatform_linux$hasHardwareInformationChanged;
++                vtable[56] = (void *)AppPlatform_linux$isTablet;
++            } else {
++                memcpy(&platform_vtable_0_11_0, plat->vtable, sizeof(app_platform_vtable_0_11_0_t));
++                plat->vtable = (void **)&platform_vtable_0_11_0;
+             platform_vtable_0_11_0.getImagePath = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getImagePath);
+             platform_vtable_0_11_0.loadPNG = (void *)AppPlatform_linux$loadPNG_0_9_0;
+             platform_vtable_0_11_0.loadTGA = (void *)AppPlatform_linux$loadTGA_0_9_0;
+@@ -1790,11 +1913,15 @@ int main(int argc, char **argv) {
+             platform_vtable_0_11_0.hasHardwareInformationChanged = (void *)AppPlatform_linux$hasHardwareInformationChanged;
+             platform_vtable_0_11_0.isTablet = (void *)AppPlatform_linux$isTablet;
+             platform_vtable_0_11_0.pickImage = (void *)AppPlatform_linux$pickImage;
++            }
+ 
+             DETOUR(android_dlsym(handle, "_ZN26HTTPRequestInternalAndroidC2ER11HTTPRequest"), ninecraft_http_construct, 1);
+             DETOUR(android_dlsym(handle, "_ZN26HTTPRequestInternalAndroid4sendEv"), ninecraft_http_send, 1);
+             DETOUR(android_dlsym(handle, "_ZN26HTTPRequestInternalAndroid5abortEv"), ninecraft_http_abort, 1);
+-            DETOUR(android_dlsym(handle, "_ZN12AndroidStore21createGooglePlayStoreERKSsR13StoreListener"), GET_SYSV_WRAPPER(ninecraft_store_create), 1);
++            void *store_create = android_dlsym(handle, "_ZN12AndroidStore21createGooglePlayStoreERKSsR13StoreListener");
++            if (store_create) {
++                DETOUR(store_create, GET_SYSV_WRAPPER(ninecraft_store_create), 1);
++            }
+         }
+         context->platform = plat;
+ #ifdef _WIN32
+@@ -1852,17 +1979,18 @@ int main(int argc, char **argv) {
+     }
+ 
+     mod_loader_execute_on_minecraft_init(ninecraft_app, version_id);
+-
+     if (version_id >= version_id_0_1_0_touch) {
+-        set_ninecraft_size(720, 480);
++        set_ninecraft_size(window_width, window_height);
+     } else {
+-        set_ninecraft_size_0_1_0(720, 480);
++        set_ninecraft_size_0_1_0(window_width, window_height);
+     }
+ 
+     if (version_id == version_id_0_11_1) {
+         minecraft_isgrabbed_offset = MINECRAFTCLIENT_ISGRABBED_OFFSET_0_11_1;
+     } else if (version_id == version_id_0_11_0) {
+-        minecraft_isgrabbed_offset = MINECRAFTCLIENT_ISGRABBED_OFFSET_0_11_0;
++        minecraft_isgrabbed_offset = version_0_11_0_build_1
++            ? MINECRAFTCLIENT_ISGRABBED_OFFSET_0_11_0_BUILD_1
++            : MINECRAFTCLIENT_ISGRABBED_OFFSET_0_11_0;
+     } else if (version_id == version_id_0_10_5) {
+         minecraft_isgrabbed_offset = MINECRAFTCLIENT_ISGRABBED_OFFSET_0_10_5;
+     } else if (version_id == version_id_0_10_4) {
+@@ -1957,8 +2085,33 @@ int main(int argc, char **argv) {
+         minecraft_isgrabbed_offset = MINECRAFT_ISGRABBED_OFFSET_0_1_0;
+     }
+     
++    miyoo_input_init(_window);
++
+     while (running) {
+-        if (((bool *)ninecraft_app)[minecraft_isgrabbed_offset]) {
++        if (version_0_11_0_build_1) {
++            resize_current_screen_build_1(window_width, window_height);
++        }
++        /* The stable 0.11.0 build never calls MinecraftClient::grabMouse, so
++         * its grab flag stays false for the entire session and the pointer is
++         * never hidden. Ninecraft only converts a click into a gameplay
++         * attack/use action on the hidden-pointer path, so in-world L1 and R1
++         * did nothing at all while walking and looking still worked (those
++         * arrive through the ControllerMoveInput hook, not the mouse).
++         *
++         * Use "no active screen" as the in-world test instead: MCPE has no
++         * current Screen during gameplay, and that member's offset is already
++         * known and verified. Driving the existing hidden-pointer state from it
++         * fixes clicks, stops the virtual cursor drawing over the world, and
++         * keeps the D-pad off the cursor in-world, all in one place. */
++        int pointer_should_hide;
++        if (version_0_11_0_build_1) {
++            pointer_should_hide = *(void **)((char *)ninecraft_app +
++                MINECRAFTCLIENT_SCREEN_OFFSET_0_11_0_BUILD_1) == NULL;
++        } else {
++            pointer_should_hide =
++                ((bool *)ninecraft_app)[minecraft_isgrabbed_offset];
++        }
++        if (pointer_should_hide) {
+             if (!mouse_pointer_hidden) {
+                 grab_mouse();
+             }
+@@ -1995,8 +2148,11 @@ int main(int argc, char **argv) {
+         mod_loader_execute_on_minecraft_update(ninecraft_app, version_id);
+ 
+         audio_engine_tick();
++        miyoo_input_draw_cursor(_window);
+         SDL_GL_SwapWindow(_window);
+ 
++        miyoo_input_tick(_window, &running);
++
+         while (SDL_PollEvent(&event)) {
+             if (event.type == SDL_QUIT) {
+                 running = false;
+@@ -2015,6 +2171,7 @@ int main(int argc, char **argv) {
+             }
+         }
+     }
++    miyoo_input_shutdown();
+     audio_engine_destroy();
+     SDL_GL_DeleteContext(gl_context);
+     SDL_DestroyWindow(_window);
+diff --git a/ninecraft/src/mods/inputs_fix_mod.c b/ninecraft/src/mods/inputs_fix_mod.c
+index 57ae4b9..cfb4f46 100644
+--- a/ninecraft/src/mods/inputs_fix_mod.c
++++ b/ninecraft/src/mods/inputs_fix_mod.c
+@@ -190,11 +190,17 @@ void inputs_fix_mod_inject(void *handle, int version_id) {
+     if (version_id >= version_id_0_5_0 && version_id <= version_id_0_8_1) {
+         ((void **)android_dlsym(handle, "_ZTV15XperiaPlayInput"))[4] = xperia_play_input_tick;
+     } else if (version_id >= version_id_0_9_0 && version_id <= version_id_0_11_1) {
+-        ((void **)android_dlsym(handle, "_ZTV19ControllerMoveInput"))[4] = xperia_play_input_tick;
+-        ((void **)android_dlsym(handle, "_ZTV19ControllerMoveInput"))[6] = xperia_play_input_set_key;
++        void **controller_move_vtable = (void **)android_dlsym(handle, "_ZTV19ControllerMoveInput");
++        if (controller_move_vtable) {
++            controller_move_vtable[4] = xperia_play_input_tick;
++            controller_move_vtable[6] = xperia_play_input_set_key;
++        }
+     }
+     if (_version_id >= version_id_0_11_0 && _version_id <= version_id_0_11_1) {
+-        ((void **)android_dlsym(handle, "_ZTV23BoatControllerMoveInput"))[4] = boat_input_tick;
+-        ((void **)android_dlsym(handle, "_ZTV23BoatControllerMoveInput"))[6] = xperia_play_input_set_key;
++        void **boat_move_vtable = (void **)android_dlsym(handle, "_ZTV23BoatControllerMoveInput");
++        if (boat_move_vtable) {
++            boat_move_vtable[4] = boat_input_tick;
++            boat_move_vtable[6] = xperia_play_input_set_key;
++        }
+     }
+-}
+\ No newline at end of file
++}

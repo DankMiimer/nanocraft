@@ -1,0 +1,37 @@
+FROM debian:buster-slim@sha256:bb3dc79fddbca7e8903248ab916bb775c96ec61014b3d02b4f06043b604726dc AS build
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN printf '%s\n' \
+      'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20240612T000000Z buster main' \
+      'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20240612T000000Z buster/updates main' \
+      > /etc/apt/sources.list && \
+    rm -f /etc/apt/sources.list.d/* && \
+    dpkg --add-architecture armhf && \
+    apt-get -o Acquire::Check-Valid-Until=false update && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates build-essential cmake ninja-build python3 python3-jinja2 python3-setuptools \
+      gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+      binutils-arm-linux-gnueabihf pkg-config file && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+
+RUN cmake -S . -B build-mm-buster -G Ninja \
+      -DCMAKE_TOOLCHAIN_FILE=cmake/arm_toolchain.cmake \
+      -DCMAKE_BUILD_TYPE=Release \
+      '-DCMAKE_C_FLAGS=-mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -O2' \
+      '-DCMAKE_CXX_FLAGS=-mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -O2' \
+      -DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_KMSDRM=OFF \
+      -DSDL_OFFSCREEN=ON -DSDL_OPENGL=ON -DSDL_OPENGLES=ON \
+      -DSDL_ALSA=OFF -DSDL_PULSEAUDIO=OFF -DSDL_PIPEWIRE=OFF \
+      -DSDL_JACK=OFF -DSDL_SNDIO=OFF -DSDL_OSS=OFF -DSDL_HIDAPI=OFF && \
+    cmake --build build-mm-buster -- -j2 && \
+    arm-linux-gnueabihf-strip build-mm-buster/ninecraft/ninecraft && \
+    file build-mm-buster/ninecraft/ninecraft && \
+    arm-linux-gnueabihf-readelf -V build-mm-buster/ninecraft/ninecraft | \
+      grep 'Name: GLIBC_' | sort -Vu | tail -5
+
+FROM scratch AS export
+COPY --from=build /src/build-mm-buster/ninecraft/ninecraft /ninecraft

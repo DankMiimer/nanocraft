@@ -1,0 +1,16 @@
+# never commit game content, build output, or anything personal
+*.apk
+*.opk
+*libminecraftpe*
+game*/
+home/
+release/
+out*/
+*.raw
+*.log
+*.bak
+__pycache__/
+
+# Build input, not redistributed: the menu font is supplied by the builder.
+# See opk/make-menu-bg.sh. Only the rendered menubg.raw ships.
+menufont.ttf

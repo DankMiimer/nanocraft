@@ -1,0 +1,20 @@
+# A CRLF shebang becomes "#!/bin/sh\r", which BusyBox reports as a missing
+# interpreter -- so a Windows clone would otherwise produce an OPK whose scripts
+# cannot run on the handheld. The symptom is a one-second black screen and a
+# return to the menu, indistinguishable from a segfault.
+*.sh    text eol=lf
+*.py    text eol=lf
+*.c     text eol=lf
+*.h     text eol=lf
+*.key   text eol=lf
+*.desktop text eol=lf
+*.md    text eol=lf
+*.patch text eol=lf
+Dockerfile* text eol=lf
+.dockerignore text eol=lf
+*.ps1   text eol=crlf
+
+# Binary assets
+*.png   binary
+*.raw   binary
+*.ttf   binary

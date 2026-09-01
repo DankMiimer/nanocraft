@@ -1,0 +1,222 @@
+# Gate 3, Route B: run the MM+'s glibc client on the musl Nano, by bundling a
+# glibc runtime instead of porting anything to musl.
+#
+# WHY THIS EXISTS AND WHY IT IS TRIED FIRST
+#
+# nano/DELTAS.md §1 states the fork's most expensive constraint: DrUm78 OS is
+# musl, so no MM+ binary can run, so every dependency must be rebuilt with the
+# FunKey SDK. Dockerfile.client-nano is that rebuild, and its own header calls
+# it "the largest single piece of work in the fork".
+#
+# The Pi Edition evaluation (docs/ALT-TARGET-PI-EDITION.md) turned up the escape
+# hatch while looking at something else entirely. MCPI Reborn needs glibc 2.34
+# on a device with 2.28, and the MM+ solved it by bundling Debian's runtime and
+# repointing every ELF's PT_INTERP at the bundled loader. The insight generalises:
+#
+#     A BUNDLED LOADER DOES NOT CARE WHAT LIBC THE ROOTFS USES.
+#
+# And the numbers say it should just work here. Measured from
+# client-quitfix (the build actually running on the MM+):
+#
+#     ELF 32-bit LSB executable, ARM, EABI5, interpreter /lib/ld-linux-armhf.so.3
+#     highest symbol versions: GLIBC_2.28, GLIBCXX_3.4.22
+#     NEEDED: libEGL libcrypto.so.1.1 libssl.so.1.1 libpng16 libz libatomic
+#             libstdc++ libgcc_s libpthread libm libdl libc
+#
+# ARMv7 armhf against an ARMv7 armhf device, and every dependency is stock
+# Debian Buster. The ONLY thing preventing it from running on the Nano is that
+# /lib/ld-linux-armhf.so.3 does not exist there.
+#
+# WHAT THIS COLLAPSES. If it works, the whole MM+ stack becomes reusable:
+# the client, llvmpipe Mesa (better than our musl softpipe — LLVM exists for
+# glibc armhf), and the Android stub libs. Only two things would still need
+# rebuilding, both small and both already understood:
+#     1. fbegl — for RGB565 240x240 instead of BGRA32 640x480 (src/fb_nano.h)
+#     2. the client's input injector — Nano evdev-keyboard, not Miyoo gamepad
+#
+# WHAT IT COSTS. ~10 MB of bundled glibc, and it does not use the musl Mesa from
+# Gate 2. That work is not wasted — it proved software GL runs on this hardware
+# and produced the fill-rate measurements in nano/README.md — but be honest that
+# Route B leaves it on the shelf.
+#
+# THE EXPERIMENT THIS BUILDS: `mcpelauncher-client --help` running on the Nano.
+# That is Gate 3's stated win condition, and the previous fork never reached it.
+#
+#   docker build -f nano/build/Dockerfile.client-glibc --target export \
+#     --output type=local,dest=nano/out-client-glibc .
+#   (build context = the minecraft-bedrock/ directory)
+#
+# STATUS: first attempt, never run on hardware.
+FROM debian:buster-slim@sha256:bb3dc79fddbca7e8903248ab916bb775c96ec61014b3d02b4f06043b604726dc AS build
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Same pinned Buster snapshot the MM+ builds against, so the bundled glibc is
+# exactly the ABI the client was linked for rather than merely a compatible one.
+RUN printf '%s\n' \
+      'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20240612T000000Z buster main' \
+      'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20240612T000000Z buster/updates main' \
+      > /etc/apt/sources.list && \
+    rm -f /etc/apt/sources.list.d/* && \
+    dpkg --add-architecture armhf && \
+    apt-get -o Acquire::Check-Valid-Until=false update && \
+    apt-get install -y --no-install-recommends \
+      libc6:armhf libgcc1:armhf libstdc++6:armhf file patchelf \
+      crossbuild-essential-armhf \
+      libegl1-mesa-dev:armhf libgles2-mesa-dev:armhf && \
+    rm -rf /var/lib/apt/lists/*
+
+# --- the glibc runtime the Nano lacks ----------------------------------------
+# Everything else the client needs is already shipped by the MM+ port in
+# App/mcpe/lib (libssl, libcrypto, libpng16, libz, libatomic, libstdc++), so
+# only the loader and core glibc are collected here.
+#
+# Resolved with cp -L: symlinks cannot be stored on the Nano's FAT partition,
+# and the loader looks these up by exact soname anyway.
+RUN mkdir -p /out/runtime && \
+    for so in ld-linux-armhf.so.3 libc.so.6 libm.so.6 libdl.so.2 \
+              libpthread.so.0 librt.so.1 libgcc_s.so.1; do \
+      src="$(find /lib/arm-linux-gnueabihf /usr/lib/arm-linux-gnueabihf -name "$so" 2>/dev/null | head -1)"; \
+      [ -n "$src" ] || { echo "MISSING $so" >&2; exit 1; }; \
+      cp -L "$src" "/out/runtime/$so"; \
+    done && \
+    echo "== bundled glibc runtime ==" && ls -la /out/runtime
+# (No point running the loader to check its version — it is an ARM binary and
+# this is an x86 builder. The version is pinned by the apt snapshot instead.)
+
+# --- the MM+ stack, reused wholesale -----------------------------------------
+# The client with the RG NANO input reader compiled in, from
+# Dockerfile.client-nano-input. Was previously the MM+'s own client-quitfix,
+# which proved the bundled-glibc idea but carries MIYOO key codes — a device
+# whose buttons emit an entirely different set (KEY_LEFTSHIFT/KEY_SPACE/KEY_E
+# versus this device's mnemonic U/D/L/R, A/B/X/Y, S/K/Q, M/N).
+#
+# Build that first:  nano/build/Dockerfile.client-nano-input
+COPY nano/out-client-input/mcpelauncher-client.armhf.standard /out/mcpelauncher-client
+COPY release-staging/tree/App/mcpe/lib/                 /out/lib/
+COPY release-staging/tree/App/mcpe/android-libs/        /out/android-libs/
+COPY release-staging/tree/App/glsmoke-llvm/lib/         /out/gl/lib/
+
+# --- fbegl for THIS panel, built against the same glibc ABI -------------------
+#
+# The MM+'s egl-wrap presents 640x480 BGRA32 with a 180-degree rotation, because
+# that is its panel. The Nano is 240x240 RGB565 mounted the right way up
+# (verified on hardware by capturing /dev/fb0). So the wrapper is rebuilt here
+# from src/fbegl_nano.c + src/fb_nano.h — the same sources already proven on the
+# device by fbtest_egl_nano, just compiled for glibc instead of musl to match
+# the bundled client.
+#
+# The trick it implements is unchanged and is why this indirection exists at
+# all: SDL resolves eglSwapBuffers by dlopen'ing libEGL.so.1 and dlsym'ing the
+# symbol, which bypasses an LD_PRELOAD interposer. So the wrapper BECOMES
+# libEGL.so.1, overrides eglSwapBuffers to read back and blit, and forwards
+# everything else to librealEGL.so.
+#
+# NOTE: -lGLESv2 -ldl only, deliberately NO -lEGL. Linking the real EGL would
+# put libEGL.so.1 in our own NEEDED list and the loader would resolve it to
+# US — a self-referential loop. Every EGL entry point is reached through
+# dlsym(RTLD_NEXT) or the librealEGL.so handle instead.
+#
+# --no-as-needed IS REQUIRED, and its absence is a silent bug. Debian's gcc
+# links --as-needed by default, and a SHARED object is allowed to carry
+# undefined symbols, so the linker happily drops DT_NEEDED for libGLESv2 even
+# though this file calls glReadPixels, glFinish, glBindFramebuffer and six
+# others. The first build here did exactly that and produced a wrapper whose
+# NEEDED was only [librealEGL.so, libc.so.6].
+#
+# Caught by diffing against the MM+'s working wrapper, which carries
+# [librealEGL.so, libGLESv2.so.2, libdl.so.2, libc.so.6] for the same nine
+# undefined symbols. Left alone it would either fail to load or appear to work
+# whenever something else happened to have loaded libGLESv2 first — the worst
+# kind of bug, since it would come and go with unrelated changes.
+COPY nano/src/fb_nano.h     /work/inc/fb_nano.h
+COPY nano/src/fbegl_nano.c  /work/fbegl_nano.c
+RUN arm-linux-gnueabihf-gcc -shared -fPIC \
+      -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -O2 \
+      -Wl,-soname,libEGL.so.1 \
+      -I/work/inc -DMESA_EGL_NO_X11_HEADERS -DEGL_NO_X11 \
+      /work/fbegl_nano.c -o /work/wrap-libEGL.so.1 \
+      -Wl,--no-as-needed -lGLESv2 -ldl
+
+# librealEGL.so is the MM+'s Mesa EGL with its soname already patched, and it
+# pairs with the glsmoke-llvm Mesa copied above, so it is reused as-is rather
+# than rebuilt. Only the presenting half of the pair is Nano-specific.
+COPY release-staging/tree/App/mcpe/egl-wrap/librealEGL.so /work/librealEGL.so
+RUN patchelf --add-needed librealEGL.so /work/wrap-libEGL.so.1 && \
+    arm-linux-gnueabihf-strip /work/wrap-libEGL.so.1 && \
+    mkdir -p /out/egl-wrap && \
+    cp /work/wrap-libEGL.so.1 /out/egl-wrap/libEGL.so.1 && \
+    cp /work/librealEGL.so    /out/egl-wrap/librealEGL.so && \
+    echo "== fbegl(nano) for glibc ==" && \
+    file /out/egl-wrap/libEGL.so.1 && \
+    patchelf --print-soname /out/egl-wrap/libEGL.so.1 && \
+    patchelf --print-needed /out/egl-wrap/libEGL.so.1
+
+# Assert the wrapper's shape rather than eyeballing it. Both of these have
+# already gone wrong once each in this file, and neither fails loudly on its
+# own — one silently drops a dependency, the other would make the loader
+# resolve libEGL.so.1 to this very object.
+RUN set -e; \
+    n="$(patchelf --print-needed /out/egl-wrap/libEGL.so.1)"; \
+    echo "$n" | grep -qx 'librealEGL.so'  || { echo "FAIL: librealEGL.so not in NEEDED" >&2; exit 1; }; \
+    echo "$n" | grep -qx 'libGLESv2.so.2' || { echo "FAIL: libGLESv2.so.2 not in NEEDED — --as-needed dropped it again" >&2; exit 1; }; \
+    ! echo "$n" | grep -qx 'libEGL.so.1'  || { echo "FAIL: self-referential libEGL.so.1 in NEEDED" >&2; exit 1; }; \
+    [ "$(patchelf --print-soname /out/egl-wrap/libEGL.so.1)" = libEGL.so.1 ] \
+      || { echo "FAIL: soname must be libEGL.so.1 or SDL will not load it" >&2; exit 1; }; \
+    echo "== fbegl wrapper shape verified =="
+
+# --- repoint the client at the bundled loader --------------------------------
+# --force-rpath is load-bearing, and the MM+ learned it the hard way on MCPI:
+# patchelf writes DT_RUNPATH by default, which the loader treats differently
+# from DT_RPATH and which left it still resolving /lib/libc.so.6.
+#
+# $ORIGIN keeps the bundle relocatable, so it works from whatever directory it
+# is dropped into on the device rather than a path baked in here.
+RUN patchelf --set-interpreter '/mnt/FunKey/minecraftnano/client/runtime/ld-linux-armhf.so.3' \
+      /out/mcpelauncher-client && \
+    # $ORIGIN/egl-wrap MUST COME FIRST, and this is not cosmetic ordering.
+    #
+    # DT_RPATH takes precedence over LD_LIBRARY_PATH. With --force-rpath (which
+    # is itself required, see above) the paths below outrank anything the launch
+    # script exports — so listing gl/lib without egl-wrap made the client bind
+    # libEGL.so.1 to Mesa's real EGL and never load the presenting wrapper at
+    # all. Verified on the device:
+    #     libEGL.so.1 => .../client/./gl/lib/libEGL.so.1      <- wrong one
+    #
+    # The failure mode is silent and expensive: the game renders every frame
+    # perfectly into a surface nobody ever displays, which looks exactly like a
+    # driver or panel fault rather than a library-order mistake.
+    patchelf --force-rpath --set-rpath \
+      '$ORIGIN/egl-wrap:$ORIGIN/runtime:$ORIGIN/lib:$ORIGIN/gl/lib:$ORIGIN/android-libs/armeabi-v7a' \
+      /out/mcpelauncher-client && \
+    echo "== patched client ==" && \
+    patchelf --print-interpreter /out/mcpelauncher-client && \
+    patchelf --print-rpath /out/mcpelauncher-client && \
+    file /out/mcpelauncher-client
+
+# Fail here rather than on the device if anything the loader will ask for is
+# absent from the bundle. Same audit idea as the Mesa recipe, same reason: a
+# missing dlopen-time dependency otherwise surfaces as an unexplained failure
+# with nothing useful in the log.
+#
+# USE patchelf --print-needed, NOT readelf. The first version of this used
+# readelf, which buster-slim does not ship: the command failed, the `for` loop
+# got an empty list, the body never ran, and it printed "every NEEDED name is
+# present" having checked precisely nothing. A gate that cannot fail is worse
+# than no gate, because it is believed. Counting the names guards against the
+# same class of silent-empty bug returning.
+RUN set -e; \
+    have="$(ls /out/runtime /out/lib /out/gl/lib 2>/dev/null | sort -u)"; \
+    needed="$(patchelf --print-needed /out/mcpelauncher-client)"; \
+    n_count="$(echo "$needed" | grep -c . || true)"; \
+    echo "== $n_count NEEDED entries to check =="; \
+    [ "$n_count" -ge 8 ] || { echo "expected >=8 NEEDED, got $n_count — the probe itself is broken" >&2; exit 1; }; \
+    miss=0; \
+    for n in $needed; do \
+      if echo "$have" | grep -qx "$n"; then echo "  ok      $n"; \
+      else echo "  MISSING $n"; miss=1; fi; \
+    done; \
+    [ "$miss" = 0 ] || { echo "bundle is incomplete" >&2; exit 1; }; \
+    echo "== every NEEDED name is present in the bundle =="
+
+FROM scratch AS export
+COPY --from=build /out/ /

@@ -1,0 +1,367 @@
+# Cross-build software Mesa (softpipe) for the Anbernic RG Nano.
+#
+# Forked from the MM+ port's build/Dockerfile.mesa. Two things change, and the
+# second one is a real downgrade that is worth understanding rather than
+# quietly accepting.
+#
+# 1. TOOLCHAIN: musl, not glibc. The MM+ builds against Debian Buster armhf.
+#    DrUm78/FunKey OS is musl (/lib/ld-musl-armhf.so.1), so nothing from a
+#    Debian armhf repository can be linked in. Everything comes from the FunKey
+#    SDK (Dockerfile.sdk) or gets built here.
+#
+# 2. SOFTPIPE, NOT LLVMPIPE — the important one.
+#
+#    The MM+ uses llvmpipe, which JITs shaders with LLVM and splits
+#    rasterization across both of its A7 cores, and measures it 2-4x faster
+#    than softpipe. It gets there by installing Debian's llvm-7-dev:armhf and
+#    running the target llvm-config under qemu-arm-static so meson can query it.
+#
+#    None of that is available here, and even if it were, two of the three
+#    reasons to want it are gone:
+#
+#      - No llvm-N-dev exists for arm-musl. Getting one means cross-building
+#        LLVM itself against musl for ARMv7: days of work, uncertain payoff.
+#      - THE THREADING WIN IS ZERO. The Nano has one core. Half of llvmpipe's
+#        advantage over softpipe is splitting rasterization across cores, and
+#        there is nothing to split across.
+#      - LLVM's footprint is hostile. The MM+ Dockerfile links LLVM components
+#        statically specifically to avoid "a 50 MB libLLVM.so to ship or mmap
+#        on a 128 MB device". This device has 57 MB.
+#
+#    So softpipe: no LLVM dependency, builds cleanly from the same Mesa source,
+#    much smaller resident footprint — which on this device may matter more than
+#    speed — and slower per pixel. That trade is made deliberately and is
+#    revisitable if Gate 5's memory numbers leave room.
+#
+#   docker build -f nano/build/Dockerfile.mesa-nano --target export \
+#     --output type=local,dest=nano/out-gl nano
+#
+# STATUS: never built.
+FROM nano-sdk:latest AS build
+ARG MESA_VERSION=20.3.5
+ARG MESA_SHA256=
+
+# Same Mesa version as the MM+ port. Not a coincidence and not arbitrary: 20.3
+# is old enough to build without meson/LLVM versions the SDK cannot provide, and
+# it is the version whose behaviour the MM+ port has already characterised. Two
+# ports on the same Mesa means a surprising result on one is checkable against
+# the other.
+WORKDIR /work
+RUN curl --fail --location --silent --show-error --retry 3 \
+      -o mesa.tar.xz "https://archive.mesa3d.org/older-versions/20.x/mesa-${MESA_VERSION}.tar.xz" && \
+    if [ -n "$MESA_SHA256" ]; then echo "$MESA_SHA256  mesa.tar.xz" | sha256sum -c -; fi && \
+    tar -xf mesa.tar.xz && mv "mesa-${MESA_VERSION}" mesa && \
+    pip3 install --no-cache-dir --break-system-packages "meson==0.61.5"
+
+# A NATIVE compiler for the build machine. The first attempt's meson output said
+#   Compiler for language c for the build machine not found.
+# which is not fatal for this option set but leaves meson unable to build any
+# build-time helper it decides it needs, and turns a clear configure error into
+# a confusing one later. The SDK provides only the ARM cross-toolchain.
+# patchelf is pulled in here too (needed after the build, for the fbegl soname
+# patching) so there is one apt layer rather than two.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential patchelf && \
+    rm -rf /var/lib/apt/lists/*
+
+# Give the SDK's pkg-config its triplet-prefixed name.
+#
+# meson needs a pkg-config for the HOST (cross) machine and the cross file names
+# `arm-funkey-linux-musleabihf-pkg-config`. That binary does not exist: the SDK
+# ships only a bare `pkg-config`. Without it, meson dies at its first pkg-config
+# dependency with the distinctly unhelpful
+#     ERROR: Pkg-config binary for machine 1 not found. Giving up.
+#
+# The bare wrapper is otherwise exactly right — it already points
+# PKG_CONFIG_LIBDIR/SYSROOT_DIR at the target sysroot and resolves target libs
+# correctly (`pkg-config --libs zlib` -> -L<sysroot>/usr/lib -lz). It only needs
+# the name, so this is a symlink rather than a reimplementation.
+#
+# THE SYMLINK MUST LIVE IN THE SDK's OWN bin. The wrapper finds the sysroot with
+# `PKGCONFDIR=$(dirname $0)`, so a link placed in /usr/local/bin would compute
+# /usr/local/bin/../arm-funkey-linux-musleabihf/sysroot and silently resolve
+# nothing — a working-looking pkg-config that finds no target libraries at all.
+RUN ln -s pkg-config \
+      /opt/funkey-sdk/bin/arm-funkey-linux-musleabihf-pkg-config && \
+    echo "== prefixed pkg-config sanity (must print a sysroot -L path) ==" && \
+    arm-funkey-linux-musleabihf-pkg-config --cflags --libs zlib
+
+COPY build/cross-armhf-musl.ini /work/cross-armhf-musl.ini
+
+# --- libdrm, cross-built into the sysroot ------------------------------------
+#
+# Mesa 20.3.5 requires libdrm even for a pure-software build. Verified, not
+# assumed — with pkg-config working, configure still stops dead at:
+#     meson.build:1434:0: ERROR: Dependency "libdrm" not found, tried pkgconfig
+# It is the DRI frontend that wants it: `swrast_dri.so` is a DRI module, and in
+# this Mesa version the DRI loader links libdrm unconditionally regardless of
+# whether any DRM kernel driver will ever exist. On this device none will.
+#
+# The MM+ port has the same requirement and satisfies it with
+# `apt-get install libdrm-dev:armhf`; its runtime library list ships
+# libdrm.so.2 for exactly this reason. There is no Debian arm-musl package, and
+# the FunKey sysroot has no libdrm at all, so it gets built here.
+#
+# 2.4.104 is era-matched to Mesa 20.3.5 (both late 2020/early 2021) and is the
+# version Alpine shipped against musl at the time, so the musl-compatibility
+# question is already answered by someone else.
+#
+# Installed with prefix=/usr and DESTDIR=$SYSROOT so libdrm.pc records the
+# normal /usr paths; the SDK's pkg-config wrapper sets PKG_CONFIG_SYSROOT_DIR
+# and re-roots -I/-L into the sysroot automatically. Installing with
+# prefix=$SYSROOT/usr instead would bake the build machine's absolute paths
+# into the .pc file and leak them into Mesa's link lines.
+ARG LIBDRM_VERSION=2.4.104
+RUN PATH=/usr/local/bin:/usr/bin:$PATH; export PATH; \
+    cd /work && \
+    curl --fail --location --silent --show-error --retry 3 \
+      -o libdrm.tar.xz \
+      "https://dri.freedesktop.org/libdrm/libdrm-${LIBDRM_VERSION}.tar.xz" && \
+    tar -xf libdrm.tar.xz && cd "libdrm-${LIBDRM_VERSION}" && \
+    meson setup build \
+      --cross-file /work/cross-armhf-musl.ini \
+      --prefix /usr \
+      -Dbuildtype=release \
+      -Dintel=false -Dradeon=false -Damdgpu=false -Dnouveau=false \
+      -Dvmwgfx=false -Domap=false -Dexynos=false -Dfreedreno=false \
+      -Dtegra=false -Detnaviv=false -Dvc4=false \
+      -Dcairo-tests=false -Dman-pages=false -Dvalgrind=false && \
+    ninja -C build -j"$(nproc)" && \
+    DESTDIR="$SYSROOT" ninja -C build install && \
+    echo "== libdrm now visible to the cross pkg-config? ==" && \
+    arm-funkey-linux-musleabihf-pkg-config --modversion libdrm && \
+    arm-funkey-linux-musleabihf-pkg-config --cflags --libs libdrm
+
+# Minimal surface: surfaceless EGL + GLES2 only. No glx, no gbm, no vulkan, no
+# X11 — there is no window system on this device and the present path is our
+# wrapper libEGL blitting to /dev/fb0.
+#
+# -Dllvm=disabled is the line that picks softpipe. With LLVM off,
+# -Dgallium-drivers=swrast builds softpipe alone into swrast_dri.so.
+# PUT THE DEBIAN/PIP TOOLS AHEAD OF THE SDK'S. This is load-bearing, and it
+# took two failed builds to find, so the reasoning is written out in full.
+#
+# The FunKey SDK is a Buildroot 2020.11 SDK and it ships its own HOST tools
+# next to the cross-compiler — verified in the image:
+#
+#     /opt/funkey-sdk/bin/python3     3.9.0   (no pip, no mako)
+#     /opt/funkey-sdk/bin/meson       0.56.0  (shebang: #!/usr/bin/env python3)
+#     /opt/funkey-sdk/bin/{ninja,pkg-config,bison,flex}
+#
+# and the image puts /opt/funkey-sdk/bin first on PATH so the cross-compiler
+# resolves. That shadows Debian's newer equivalents, which caused two DIFFERENT
+# failures with one root cause:
+#
+#   1. meson found the SDK's python3 3.9, which has no mako:
+#        ERROR: Python (3.x) mako module >= 0.8.0 required to build mesa
+#   2. Prepending only /usr/bin fixed python but left the SDK's meson 0.56.0
+#      ahead of the pip-installed 0.61.5. Its `#!/usr/bin/env python3` shebang
+#      then picked up the now-first system python 3.11, which has no
+#      meson==0.56.0 metadata:
+#        pkg_resources.DistributionNotFound: The 'meson==0.56.0' distribution
+#        was not found and is required by the application
+#
+# So prepend BOTH /usr/local/bin (pip meson 0.61.5) and /usr/bin (python 3.11 +
+# mako, Debian ninja). The pip meson's shebang is the absolute
+# `#!/usr/bin/python3`, so once it wins it is immune to further PATH games.
+#
+# Mesa uses python only for BUILD-TIME codegen — mako templates emitting C that
+# is then cross-compiled — so the build machine's interpreter is the correct one
+# to use. Installing mako into the SDK's python was the alternative and is
+# worse: no pip, and mako pulls MarkupSafe, whose C extension is built for 3.11
+# and would not import under 3.9.
+#
+# Reordering cannot break the cross-build: every cross tool has a unique
+# arm-funkey-linux-musleabihf-* name that exists ONLY in the SDK, so a bare
+# /usr/bin tool cannot be mistaken for one. Note that `pkg-config` is the
+# exception that proves the rule — the SDK ships it WITHOUT the prefix, which is
+# why the step above has to create the prefixed name before meson can find it.
+# The echo lines below assert this on every build rather than trusting the
+# comment; an earlier version of this file asserted it and was wrong.
+RUN PATH=/usr/local/bin:/usr/bin:$PATH; export PATH; \
+    echo "== build-time meson:  $(command -v meson) $(meson --version) ==" && \
+    echo "== build-time python: $(command -v python3) $(python3 -V 2>&1) ==" && \
+    python3 -c "import mako; print('mako', mako.__version__)" && \
+    echo "== cross gcc still resolves: $(command -v arm-funkey-linux-musleabihf-gcc) ==" && \
+    cd /work/mesa && meson setup build \
+      --cross-file /work/cross-armhf-musl.ini \
+      --prefix /opt/mesa \
+      -Dbuildtype=release \
+      -Dgallium-drivers=swrast \
+      -Dvulkan-drivers= \
+      -Ddri-drivers= \
+      -Dplatforms= \
+      -Dglx=disabled \
+      -Degl=true \
+      -Dgles1=disabled -Dgles2=true \
+      -Dgbm=false \
+      -Dllvm=disabled \
+      -Dshared-glapi=true \
+      -Dosmesa=gallium \
+      -Dzstd=disabled -Dlibunwind=false -Dvalgrind=false && \
+    ninja -C build -j"$(nproc)" && ninja -C build install
+
+# --- the present-path wrapper ------------------------------------------------
+# fbegl: a wrapper libEGL.so.1 that SDL loads instead of Mesa's. It overrides
+# eglSwapBuffers (read back, blit to /dev/fb0 as RGB565) and forwards everything
+# else to librealEGL.so — a copy of Mesa's libEGL with its soname patched, added
+# as a NEEDED dependency.
+#
+# This indirection exists because SDL dlopen()s libEGL.so.1 and dlsym()s
+# eglSwapBuffers, which bypasses an LD_PRELOAD interposer entirely. Becoming the
+# library is the only reliable way in.
+#
+# (patchelf is installed further up, alongside the native build-essential.)
+
+COPY src/fb_nano.h    /work/inc/fb_nano.h
+COPY src/fbegl_nano.c /work/fbegl_nano.c
+RUN cd /work && \
+    cp /opt/mesa/lib/libEGL.so.1 /work/librealEGL.so 2>/dev/null || \
+    cp /opt/mesa/lib/*/libEGL.so.1 /work/librealEGL.so && \
+    ${CROSS}-gcc -shared -fPIC \
+      -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -O2 \
+      -Wl,-soname,libEGL.so.1 \
+      -I/work/inc -I/opt/mesa/include -DMESA_EGL_NO_X11_HEADERS -DEGL_NO_X11 \
+      fbegl_nano.c -o /work/wrap-libEGL.so.1 \
+      -L/opt/mesa/lib -Wl,-rpath-link,/opt/mesa/lib -lGLESv2 -ldl && \
+    patchelf --set-soname librealEGL.so /work/librealEGL.so && \
+    patchelf --add-needed librealEGL.so /work/wrap-libEGL.so.1 && \
+    ${CROSS}-strip /work/wrap-libEGL.so.1 && \
+    echo "== fbegl NEEDED ==" && patchelf --print-needed /work/wrap-libEGL.so.1 && \
+    file /work/wrap-libEGL.so.1 /work/librealEGL.so
+
+# --- assemble ----------------------------------------------------------------
+RUN mkdir -p /out/lib /out/lib/dri /out/egl-wrap && \
+    cp -aL /opt/mesa/lib/*.so*     /out/lib/     2>/dev/null || true; \
+    cp -aL /opt/mesa/lib/*/*.so*   /out/lib/     2>/dev/null || true; \
+    cp -aL /opt/mesa/lib/dri/*.so* /out/lib/dri/ 2>/dev/null || true; \
+    cp -aL /opt/mesa/lib/*/dri/*.so* /out/lib/dri/ 2>/dev/null || true; \
+    cp /work/wrap-libEGL.so.1 /out/egl-wrap/libEGL.so.1 && \
+    cp /work/librealEGL.so    /out/egl-wrap/librealEGL.so && \
+    echo "== softpipe present in swrast_dri.so? ==" && \
+    (strings /out/lib/dri/swrast_dri.so | grep -c softpipe || true)
+
+# --- trim the bundle ---------------------------------------------------------
+# The first assembled bundle was 66 MB across 25 files, for two reasons:
+#
+#   1. Only the dri/ modules were stripped. Everything else still carried debug
+#      info — libEGL and librealEGL were built "with debug_info, not stripped".
+#   2. The copy globs took the DRI modules twice. Mesa installs them under
+#      lib/dri, and `cp /opt/mesa/lib/*.so*` also matched them at the top level,
+#      so swrast_dri.so (the single largest object here) was shipped twice.
+#
+# Neither costs RAM directly — only mapped pages become resident — but on a
+# device where the game needs a swap file to load at all, tens of megabytes of
+# duplicated debug info on the card is not free, and the duplicate is actively
+# confusing to anyone reading the deployed tree.
+#
+# LIBGL_DRIVERS_PATH points at lib/dri (see launch-mcpe-nano.sh), so the
+# top-level copies are the ones to drop.
+# OSMesa is dropped too, which is the single biggest saving here. Mesa's
+# `-Dosmesa=gallium` builds it and it is genuinely useful — the MM+ port has an
+# fbtest_osmesa smoke harness that uses it — but NOTHING in this fork consumes
+# it. The render path is SDL -> EGL -> GLESv2, and the present path is the
+# fbegl wrapper; no object in this bundle lists libOSMesa in its NEEDED.
+#
+# It cost 22.5 MB of the first bundle, as THREE identical 7.52 MB files:
+# `cp -aL` dereferences the soname symlink chain, so libOSMesa.so,
+# libOSMesa.so.8 and libOSMesa.so.8.0.0 each became a full copy rather than two
+# links and a file. That dereference is deliberate and must stay — the deploy
+# target is FAT, which cannot store symlinks — so the fix is to not ship the
+# library at all rather than to stop resolving links.
+#
+# The build option is left ON so re-adding an OSMesa smoke harness later is a
+# one-line change to this filter rather than a Mesa rebuild.
+RUN rm -f /out/lib/libOSMesa.so* && \
+    rm -f /out/lib/swrast_dri.so /out/lib/kms_swrast_dri.so && \
+    ${CROSS}-strip --strip-unneeded /out/lib/*.so* /out/lib/dri/*.so* \
+      /out/egl-wrap/*.so* 2>/dev/null || true; \
+    echo "== bundle after trim ==" && du -sh /out && \
+    ls -laS /out/lib /out/lib/dri /out/egl-wrap | grep -E '^-' | head -12
+
+# --- runtime dependencies Mesa does NOT install ------------------------------
+#
+# THE TRAP, inherited verbatim from the MM+ port and confirmed here by audit:
+# Mesa dlopens swrast_dri.so at RUNTIME, so that module's dependencies never
+# appear in any NEEDED list the loader checks at startup. They surface only when
+# something actually tries to draw — which on this device means a black screen
+# after a long load, with nothing in the log pointing at a missing library.
+#
+# Measured on the first successful build, these four are needed and are not
+# under /opt/mesa:
+#     libdrm.so.2       cross-built above, installed into the sysroot
+#     libz.so.1         from the SDK sysroot
+#     libstdc++.so.6    from the SDK (swrast_dri.so is C++)
+#     libgcc_s.so.1     from the SDK
+#
+# They are SHIPPED rather than assumed present on the device. DrUm78's rootfs
+# probably has libstdc++ and libz, but "probably" is how you get a port that
+# works on the developer's console and not on anyone else's — and the launcher
+# puts our directory first on LD_LIBRARY_PATH, so ours wins deterministically.
+#
+# Symlinks are resolved to real files (cp -L) because the deploy target is FAT,
+# which cannot store them.
+RUN set -e; \
+    for so in libdrm.so.2 libz.so.1 libstdc++.so.6 libgcc_s.so.1; do \
+      src="$(find "$SYSROOT" /opt/funkey-sdk/arm-funkey-linux-musleabihf \
+              -name "$so" 2>/dev/null | head -1)"; \
+      [ -n "$src" ] || { echo "MISSING RUNTIME DEP: $so" >&2; exit 1; }; \
+      cp -L "$src" "/out/lib/$so"; \
+      echo "  shipped $so  <- $src"; \
+    done
+
+# --- final audit: every NEEDED name must exist in the bundle ------------------
+# Cheap, and it is the check that would have caught the four libraries above
+# before they became a black screen on the device. Base musl/loader libraries
+# are excluded because the rootfs provides them.
+RUN set -e; \
+    have="$(ls /out/lib /out/lib/dri /out/egl-wrap | sort -u)"; \
+    miss=0; \
+    for f in /out/lib/*.so* /out/lib/dri/*.so* /out/egl-wrap/*.so*; do \
+      ${CROSS}-readelf -d "$f" 2>/dev/null | grep NEEDED \
+        | sed 's/.*Shared library: \[\(.*\)\]/\1/'; \
+    done | sort -u | while read -r n; do \
+      case "$n" in libc.so|libm.so|libdl.so|libpthread.so|librt.so|ld-musl*) continue ;; esac; \
+      if echo "$have" | grep -qx "$n"; then echo "  ok      $n"; \
+      else echo "  MISSING $n"; miss=1; fi; \
+      [ "$miss" = 0 ] || exit 1; \
+    done && \
+    echo "== all runtime dependencies are present in the bundle ==" && \
+    echo "== assembled ==" && ls -laR /out
+
+# --- Gate 2 on-device test ---------------------------------------------------
+# An EGL triangle rendered through software Mesa and presented to /dev/fb0.
+#
+# The MM+ Mesa recipe carries fbtest_egl/fbtest_osmesa for the same reason: it
+# is the only way to test the GL stack on real hardware WITHOUT the launcher,
+# the Android linker or any game files — all of which are Gate 3 and much
+# further off. It also produces the per-pixel rasterization cost that every
+# frame-rate projection in these docs is currently guessing at.
+#
+# Linked against Mesa's libEGL, but at RUNTIME the wrapper in egl-wrap/ shadows
+# it (see run-gl-test.sh), so by default this exercises fbegl_nano.c — the one
+# piece of the present path that nothing else tests.
+COPY src/fbtest_egl_nano.c /work/src-test/fbtest_egl_nano.c
+COPY src/run-gl-test.sh    /work/src-test/run-gl-test.sh
+COPY src/nano-clk.c        /work/src-test/nano-clk.c
+
+# nano-clk: READ-ONLY CPU PLL reporter. Needs no Mesa, but is built here because
+# this is where the cross-compiler and the /out staging already are.
+RUN cd /work && \
+    ${CROSS}-gcc -O2 -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard \
+      src-test/nano-clk.c -o /out/nano-clk && \
+    ${CROSS}-strip /out/nano-clk && file /out/nano-clk
+RUN cd /work && \
+    ${CROSS}-gcc -O2 -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard \
+      -I/work/inc -I/opt/mesa/include \
+      -DMESA_EGL_NO_X11_HEADERS -DEGL_NO_X11 \
+      src-test/fbtest_egl_nano.c -o /out/fbtest_egl_nano \
+      -L/opt/mesa/lib -Wl,-rpath-link,/opt/mesa/lib \
+      -lEGL -lGLESv2 -lm && \
+    ${CROSS}-strip /out/fbtest_egl_nano && \
+    cp src-test/run-gl-test.sh /out/run-gl-test.sh && chmod +x /out/run-gl-test.sh && \
+    echo "== gl test ==" && file /out/fbtest_egl_nano && \
+    ${CROSS}-readelf -d /out/fbtest_egl_nano | grep NEEDED
+
+FROM scratch AS export
+COPY --from=build /out/ /

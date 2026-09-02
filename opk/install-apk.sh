@@ -103,5 +103,38 @@ if [ ! -f "$DEST/lib/armeabi-v7a/libminecraftpe.so" ]; then
   exit 1
 fi
 
+# --- identify the build -------------------------------------------------------
+# "0.8.1" is not one file. Several 0.8.1 APKs circulate and their game libraries
+# are not all the same build, which matters more than it sounds: Ninecraft reads
+# the game's C++ objects at HARD-CODED byte offsets (NINECRAFTAPP_SCREEN_OFFSET,
+# MINECRAFT_ISGRABBED_OFFSET). Those were validated against the build below. A
+# different build can install and show its menus perfectly and then segfault the
+# moment the offsets are used for real.
+#
+# So record the identity of what was actually installed. This costs a second and
+# turns "it crashes when I press Play" into a one-line answer.
+KNOWN_SHA=baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
+KNOWN_SIZE=9668996
+LIB=$DEST/lib/armeabi-v7a/libminecraftpe.so
+GOT_SIZE=$(wc -c < "$LIB" 2>/dev/null)
+GOT_SHA=$(sha256sum "$LIB" 2>/dev/null | cut -d' ' -f1)
+
+say "Game library: ${GOT_SIZE:-?} bytes"
+say "sha256: ${GOT_SHA:-unavailable}"
+
+if [ -n "$GOT_SHA" ] && [ "$GOT_SHA" != "$KNOWN_SHA" ]; then
+  say ""
+  say "NOTE: this is a DIFFERENT BUILD of 0.8.1 from the one this port was"
+  say "tested against ($KNOWN_SIZE bytes, sha256 baf9ca24...)."
+  say ""
+  say "It may work perfectly. But if the game shows its menus and then exits"
+  say "when you press Play, this is the first thing to suspect: the launcher"
+  say "reads the game's internal structures at fixed offsets that were checked"
+  say "against that build, and a different one can put them elsewhere."
+  say ""
+  say "Please include these two lines in any bug report."
+fi
+
+say ""
 say "Installed. $(du -sh "$DEST" 2>/dev/null | cut -f1) extracted to game081/."
 exit 0

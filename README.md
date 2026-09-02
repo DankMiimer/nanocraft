@@ -88,33 +88,41 @@ at your own risk. The setting persists until reboot, so set it once and launch.
 - About **300 MB free** on the card.
 - **Your own Pocket Edition 0.8.1 APK**, 32-bit `armeabi-v7a`.
 
-## Might it run on a FunKey S? Probably — untested
+## FunKey S: menus work, entering a world does not (yet)
 
-I only own an RG Nano, so **this is reasoning, not a report.** Take it as a
-starting point rather than a claim.
+I only own an RG Nano, but a **FunKey S** owner on the latest DrUm78 build has
+tried it, and the result is genuinely useful:
 
-The FunKey S is the console DrUm78's OS was originally built for, and the two
-are close enough that most of this port should not care which one it is on:
+> main menu works, options menu works, **Play crashes to desktop**
 
-- **Same OS** — FunKey-OS, the same `fkgpiod`, GMenu2X and `opkrun`. NanoCraft's
-  package is even named `.funkey-s.desktop`, because that is the suffix this OS
-  wants on both.
-- **Same screen geometry** — 240x240. The RGB565 framebuffer presenter and the
-  240x240 quick-menu background would need no changes.
-- **Same SoC family and RAM class** — Allwinner V3s, 64 MB. Nothing here assumes
-  more than the Nano has.
+So the hard parts port cleanly. Their log shows the framebuffer at 240x240, the
+RGB565 presenter running, llvmpipe rendering and the buttons arriving correctly
+— then `rc=139`, which is a **segfault**, at the moment Play is pressed.
 
-What I would expect to check first:
+That is consistent with the platform being fine and something else being wrong.
+The leading suspect is **which 0.8.1 you have**, not which console.
 
-- **Buttons.** `opk/minecraft.key` maps `MENU` and `FN` as distinct inputs, and
-  the whole control scheme leans on `L` as a modifier. If a FunKey S does not
-  expose the same set, that file is where you would fix it — it is plain text,
-  and `keymap save` tells you what actually got stored.
-- **Frame rate.** If its clock differs from the Nano's 1008 MHz, expect the
-  8 fps figure to scale roughly with it. Everything here is CPU-bound.
+**Not every "0.8.1" APK is the same build.** Ninecraft reads the game's own C++
+objects at *hard-coded byte offsets*, and those were validated against one
+specific library. A different build of the same version number can show every
+menu perfectly and then fault the instant those offsets are used for real —
+which is exactly the menu-to-world transition.
 
-If you try it, I would genuinely like to know either way — open an issue with
-what happened.
+The build this port is tested against:
+
+```text
+libminecraftpe.so   9,668,996 bytes
+sha256              baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
+```
+
+The installer now prints the size and sha256 of whatever you gave it into
+`install.log`, and says so when it is not that build. **If Play exits for you,
+check those two lines first.**
+
+Everything else about a FunKey S looks compatible — same FunKey-OS, same
+`fkgpiod`, same 240x240 panel, same Allwinner V3s family and RAM class, and this
+package is already named `.funkey-s.desktop` because that is the suffix the OS
+wants on both. Reports welcome either way.
 
 ## Install
 

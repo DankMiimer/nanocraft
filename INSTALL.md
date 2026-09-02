@@ -98,8 +98,31 @@ Logs are written to `/mnt/FunKey/nanocraft/`:
 | `No Minecraft APK found` | Step 3 — check it is really a `.apk`. |
 | `no armeabi-v7a game library` | An arm64 or x86 APK. This console is 32-bit ARM. |
 | `NanoCraft targets Pocket Edition 0.8.1` | Wrong version. Only 0.8.1 is supported. |
+| **Menus work, but Play exits to the launcher** | **Most likely a different 0.8.1 build — see below.** |
 | Black screen for a long time | First load is slow. Give it two minutes. |
 | Entry missing from the menu | Restart the front end so it rescans. |
+
+### "Play exits to the launcher"
+
+`run.log` ending in `[opk] exit rc=139` means the game **segfaulted** (139 is
+128 + signal 11), not that it quit.
+
+**Not every APK labelled 0.8.1 is the same build.** Ninecraft reads the game's
+own C++ objects at hard-coded byte offsets, validated against one specific
+library. A different build of the same version can render every menu correctly
+and then fault the moment those offsets are used for real — which is the
+menu-to-world transition, i.e. pressing Play.
+
+The installer records what you actually gave it. Check `install.log`:
+
+```text
+Game library: 9668996 bytes
+sha256: baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
+```
+
+Those are the tested values. If yours differ, the installer will have said so,
+and that is the first thing to report. A different build is not *guaranteed* to
+fail — but it is the first thing to rule out.
 
 ## Uninstall
 

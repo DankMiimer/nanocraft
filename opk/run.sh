@@ -125,6 +125,26 @@ MCPE_DATA="$DATA" NINECRAFT_WIDTH="$W" NINECRAFT_HEIGHT="$H" MIYOO_NO_GRAB=1 \
   sh "$APP_DIR/launch-pe-nano.sh" "$DATA/game081" >> "$LOG" 2>&1 &
 GAME=$!
 
+# --- diagnostic hook ----------------------------------------------------------
+# Inert unless a diagnostic build sets NANOCRAFT_DIAG=1. A crash's program
+# counter means nothing on its own; resolved against the process's memory map it
+# names the library that faulted. The map has to be captured while the process
+# is alive, so it is grabbed once the game is up and the status refreshed as it
+# runs, leaving the last sample before a crash.
+if [ "${NANOCRAFT_DIAG:-0}" = 1 ]; then
+  ( n=0
+    while [ $n -lt 120 ] && kill -0 "$GAME" 2>/dev/null; do
+      P=$(pgrep -f '[l]d-linux-armhf' 2>/dev/null | head -1)
+      if [ -n "$P" ] && [ -r "/proc/$P/maps" ]; then
+        [ -f "$DATA/diag-maps.txt" ] || cat "/proc/$P/maps" > "$DATA/diag-maps.txt" 2>/dev/null
+        cat "/proc/$P/status" > "$DATA/diag-status.txt" 2>/dev/null
+        echo "$P" > "$DATA/diag-pid.txt" 2>/dev/null
+      fi
+      sleep 5
+      n=$(( n + 5 ))
+    done ) >/dev/null 2>&1 &
+fi
+
 # --- quick menu --------------------------------------------------------------
 # THE MENU IS DRAWN BY THE FOREGROUND APP, NOT BY THE OS. fkgpiod answers the
 # power button with `powerdown schedule 0.1`, which sends SIGUSR1 to the

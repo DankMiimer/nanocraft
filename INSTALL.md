@@ -148,6 +148,36 @@ make it again if it is ever needed.
 **Please include those `[mem]` lines in any report** — they are the single most
 useful thing you can send.
 
+## Reporting a problem: the diagnostic build
+
+If NanoCraft misbehaves — especially if the menus work and **Play exits** —
+there is a diagnostic build that answers most of the questions in one go, so you
+are not asked the same thing five times.
+
+**`NanoCraftDiag_funkey-s.opk`**, on the
+[releases page](https://github.com/DankMiimer/nanocraft/releases/latest).
+
+1. Copy it into `/mnt/Native games/` beside the normal package.
+2. Launch **NanoCraft Diag** from Games.
+3. It records the console, probes how much memory a process can really get,
+   then **starts the game normally**. Play until it crashes, or quit with a long
+   press on MENU if it does not.
+4. It finishes by itself and shows **REPORT SAVED** on screen.
+5. Send `/mnt/FunKey/nanocraft/nanocraft-report.txt`.
+
+**It writes a file and sends nothing.** There is no network code in it — the
+packaging script refuses to build it if any appears. The report contains
+hardware details and this port's own state: no personal files, no credentials,
+no game content. Read it before sending if you like; it is plain text.
+
+Delete the `.opk` afterwards and it is gone.
+
+What makes it worth running: it turns the kernel's fault reporting on before the
+game starts, captures the game's memory map while it lives, and afterwards
+resolves any crash address against that map. Instead of "it crashes when I press
+Play" the report says which library faulted and at what offset — the difference
+between guessing and knowing.
+
 ## Uninstall
 
 Delete `/mnt/Native games/NanoCraft_funkey-s.opk`, its `.png`, and

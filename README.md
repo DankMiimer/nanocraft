@@ -160,6 +160,21 @@ Everything else about a FunKey S looks compatible — same FunKey-OS, same
 already named `.funkey-s.desktop` because that is the suffix the OS wants on
 both. Reports welcome either way.
 
+### If it fails for you, there is a diagnostic build
+
+**`NanoCraftDiag_funkey-s.opk`** on the
+[releases page](https://github.com/DankMiimer/nanocraft/releases/latest) answers
+most of the questions in one run, so nobody has to be asked the same thing five
+times. It records the console, probes how much memory a process can really
+obtain, runs the game normally, and — the useful part — turns on the kernel's
+fault reporting first and captures the game's memory map while it lives, so any
+crash address can be **resolved to the library that faulted and the offset
+inside it**.
+
+It writes `/mnt/FunKey/nanocraft/nanocraft-report.txt` and **sends nothing**;
+the packaging script refuses to build it if any network code appears. Full
+instructions in [INSTALL.md](INSTALL.md).
+
 ## Install
 
 See **[INSTALL.md](INSTALL.md)**. In short: copy the `.opk` into

@@ -13,7 +13,10 @@ icon, not just the output -- and so it can be regenerated at any size.
 Pure standard library: PIL is not available here, so the PNG is encoded by hand
 (zlib + four chunks). No dependencies, nothing to install.
 
-    make-icon.py [size] [out.png]
+    make-icon.py [size] [out.png] [variant]
+
+variant "diag" recolours the cube amber, so the diagnostic build is obviously a
+different entry in the Games menu rather than a second copy of the game.
 """
 import struct
 import sys
@@ -21,14 +24,22 @@ import zlib
 
 SIZE = int(sys.argv[1]) if len(sys.argv) > 1 else 140
 OUT = sys.argv[2] if len(sys.argv) > 2 else "nanocraft.png"
+VARIANT = sys.argv[3] if len(sys.argv) > 3 else "game"
 
 BG = (16, 24, 34)
 PANEL = (26, 38, 56)
-TOP = (126, 214, 176)      # lit face
-LEFT = (58, 140, 122)      # shaded face
-RIGHT = (36, 96, 92)       # darkest face
-EDGE = (168, 240, 208)
-SPARK = (240, 196, 96)     # the small cubes
+if VARIANT == "diag":
+    TOP = (240, 196, 96)
+    LEFT = (176, 132, 52)
+    RIGHT = (128, 92, 34)
+    EDGE = (252, 224, 150)
+    SPARK = (126, 214, 176)
+else:
+    TOP = (126, 214, 176)      # lit face
+    LEFT = (58, 140, 122)      # shaded face
+    RIGHT = (36, 96, 92)       # darkest face
+    EDGE = (168, 240, 208)
+    SPARK = (240, 196, 96)     # the small cubes
 
 px = [[BG for _ in range(SIZE)] for _ in range(SIZE)]
 

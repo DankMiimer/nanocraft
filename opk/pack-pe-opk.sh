@@ -39,7 +39,13 @@ OUT=$HOME/$NAME.opk
 
 PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-swap.sh"
 PAYLOAD_PY="quickmenu.py"
-PAYLOAD_DATA="minecraft.key menubg.raw nanocraft.png nanocraft.funkey-s.desktop"
+PAYLOAD_DATA="minecraft.key menubg.raw nanocraft.png nanocraft.funkey-s.desktop
+              res240.raw res120.raw
+              cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
+# nano-clk is a static ARM binary, not a script: it writes the CPU PLL through
+# /dev/mem, which the quick menu's CPU row drives. Static so it depends on
+# nothing - this console is musl and the toolchain is glibc.
+PAYLOAD_BIN="nano-clk"
 
 # menubg.raw is a build product and is not committed, so a fresh clone will not
 # have it. Say so plainly instead of failing on a bare `cp`.
@@ -58,9 +64,31 @@ fi
 
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
-for f in $PAYLOAD_SCRIPTS $PAYLOAD_PY $PAYLOAD_DATA; do
+for f in $PAYLOAD_SCRIPTS $PAYLOAD_PY $PAYLOAD_DATA $PAYLOAD_BIN; do
   cp "$SRC/$f" "$STAGE/"
 done
+
+# Every value strip the quick menu can blit must be present and whole. A missing
+# one would leave the CPU or screen row blank at exactly the moment someone is
+# trying to read what it is set to.
+for f in res240.raw res120.raw cpu1008.raw cpu1056.raw cpu1104.raw \
+         cpu1152.raw cpu1200.raw cpu1248.raw; do
+  if [ "$(wc -c < "$STAGE/$f")" -ne 2736 ]; then
+    echo "ERROR: $f is $(wc -c < "$STAGE/$f") bytes, expected 2736."
+    echo "       Rebuild the strips with ./make-menu-bg.sh"
+    exit 1
+  fi
+done
+
+# nano-clk writes CPU clock registers, so confirm it is the right architecture
+# rather than discovering on the console that it will not execute.
+case "$(file -b "$STAGE/nano-clk" 2>/dev/null)" in
+  *"ARM"*"statically linked"*) : ;;
+  *) echo "ERROR: nano-clk is not a static ARM binary:"
+     file -b "$STAGE/nano-clk"
+     echo "       Rebuild it with ../src/build-nanoclk.sh"
+     exit 1 ;;
+esac
 
 # menubg.raw is a flat 240x240 RGB565 buffer built by make-menu-bg.sh. Refuse to
 # ship a truncated one: a short read would leave the quick menu half drawn over
@@ -84,7 +112,7 @@ if [ "$ICON_WH" != "32x32" ]; then
   exit 1
 fi
 
-chmod 755 $(for f in $PAYLOAD_SCRIPTS $PAYLOAD_PY; do echo "$STAGE/$f"; done)
+chmod 755 $(for f in $PAYLOAD_SCRIPTS $PAYLOAD_PY $PAYLOAD_BIN; do echo "$STAGE/$f"; done)
 chmod 644 $(for f in $PAYLOAD_DATA; do echo "$STAGE/$f"; done)
 
 # CRLF anywhere in a shell script is a syntax error on busybox ash, and the

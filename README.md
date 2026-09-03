@@ -63,24 +63,35 @@ So resolution alone tops out near 14 fps no matter how far you drop it, while
 and 120x120 are the only sizes that divide the panel cleanly; anything between
 them shimmers.
 
-Set `/mnt/FunKey/nanocraft/resolution.txt` to `120 120` if you want to try it.
+Switch between them in the quick menu (**L + SELECT → SCREEN**), then pick
+RESTART to apply it — the game reads the size once at startup, so it cannot
+change in a running process. Editing
+`/mnt/FunKey/nanocraft/resolution.txt` does the same thing.
 
 **8 fps is what this hardware does.** It is enough to build, explore and potter
 about. It is not enough for combat.
 
-### Overclocking helps, and costs no picture quality
+### Overclocking, in the quick menu
 
 It is the only lever left that attacks that fixed 70 ms, because all of it is
-CPU time:
+CPU time — and unlike dropping the resolution it costs **no picture quality**.
 
 | Clock | 240x240 | 120x120 |
 | --- | ---: | ---: |
 | 1008 MHz (stock) | 7.8 fps | 11.9 fps |
 | 1200 MHz | ~9.4 fps | ~14.2 fps |
 
-**NanoCraft ships no overclock code and never will** — a wrong PLL value hangs
-the console until you pull the battery. Use DrUm78's separate `Overclock.opk`,
-at your own risk. The setting persists until reboot, so set it once and launch.
+**L + SELECT → CPU**, then left/right. 1008 to 1248 MHz in 48 MHz steps,
+applied immediately. Measured here: a fixed workload runs in 1.34 s at stock and
+1.11 s at 1200 MHz, a 1.21x speed-up against the 1.19x the clock ratio predicts.
+
+**Read this before using it.** This SoC has **no thermal management and no
+voltage control**, so nothing steps in to protect it and these are overclocks at
+the stock voltage. The ladder stops at 1248 because the V3s is specified at
+1.2 GHz; the tool refuses to go further. Every step was verified on one console
+here — yours may differ. Nothing is written to storage: the clock lives in a
+register, NanoCraft restores stock when you quit, and a reboot clears it
+regardless. If the console locks up, power-cycle it and pick a lower step.
 
 ## What you need
 
@@ -211,8 +222,16 @@ Looking accelerates: a tap nudges the camera, holding speeds it up.
 ![The NanoCraft quick menu: volume and brightness bars, close game, shutdown and
 resume.](docs/img/quick-menu.png)
 
-**L + SELECT** brings up volume, brightness, close game, shutdown and resume.
-D-pad to move, left/right to change a value, A to pick, B to go back.
+**L + SELECT** brings it up. D-pad to move, left/right to change a value, A to
+pick, B to go back.
+
+| Row | What it does |
+| --- | --- |
+| VOLUME / BRIGHT | adjust, immediately |
+| **CPU** | 1008 – 1248 MHz in 48 MHz steps, **applies at once** |
+| **SCREEN** | 240x240 or 120x120 — **needs a restart**, because the game reads the size once at startup |
+| RESTART | relaunch the game, which is how a screen change is applied |
+| CLOSE GAME / SHUTDOWN / RESUME | leave |
 
 This exists because on this OS **the power menu is drawn by whatever app is in
 the foreground**, not by the system — so a game either provides one or you get

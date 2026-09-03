@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.0.2
+
+The quick menu gained the two settings worth having, and both are applied from
+the console rather than by editing files.
+
+- **CPU speed, 1008 to 1248 MHz in 48 MHz steps, applied immediately.** This is
+  the only lever that touches the fixed ~70 ms of every frame, and unlike
+  lowering the resolution it costs no picture quality. Measured: a fixed
+  workload runs in 1.34 s at stock and 1.11 s at 1200 MHz — a 1.21x speed-up
+  against the 1.19x the clock ratio predicts, so the register write really does
+  change how fast the machine computes.
+- **Screen size, 240x240 or 120x120**, with a RESTART row beside it because the
+  game reads its render size once at startup and cannot change it while running.
+
+The clock is set by writing the Allwinner CCU PLL through `/dev/mem`, which is
+the only route on a console with no cpufreq interface. The CPU is moved onto the
+24 MHz oscillator before the PLL it is running from is touched, the lock is
+waited for with a timeout, and a PLL that does not lock is rolled back so a
+rejected clock leaves the machine exactly as it was. The ladder stops at
+1248 MHz — the V3s is specified at 1.2 GHz, and this SoC has neither thermal
+management nor voltage control. Stock is restored when the game exits, and the
+setting does not survive a reboot.
+
 ## v1.0.1
 
 Driven by the first outside test report — a FunKey S owner whose menus worked

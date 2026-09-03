@@ -22,14 +22,16 @@ OUT=$HOME/$NAME.opk
 # The game half must be byte-identical to the shipping package, or the
 # diagnostic would be measuring something the tester does not actually run.
 GAME_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-swap.sh"
-GAME_DATA="minecraft.key menubg.raw"
+GAME_DATA="minecraft.key menubg.raw res240.raw res120.raw
+           cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
 GAME_PY="quickmenu.py"
+GAME_BIN="nano-clk"
 DIAG_SCRIPTS="diagnose.sh"
 DIAG_PY="resolve-fault.py memprobe.py"
 DIAG_DATA="diagbg.raw"
 
 rm -rf "$STAGE"; mkdir -p "$STAGE"
-for f in $GAME_SCRIPTS $GAME_PY $GAME_DATA $DIAG_SCRIPTS $DIAG_PY $DIAG_DATA; do
+for f in $GAME_SCRIPTS $GAME_PY $GAME_DATA $GAME_BIN $DIAG_SCRIPTS $DIAG_PY $DIAG_DATA; do
   cp "$SRC/$f" "$STAGE/"
 done
 
@@ -54,7 +56,7 @@ Terminal=false
 StartupNotify=true
 EOF
 
-chmod 755 $(for f in $GAME_SCRIPTS $GAME_PY $DIAG_SCRIPTS $DIAG_PY; do echo "$STAGE/$f"; done)
+chmod 755 $(for f in $GAME_SCRIPTS $GAME_PY $GAME_BIN $DIAG_SCRIPTS $DIAG_PY; do echo "$STAGE/$f"; done)
 chmod 644 $(for f in $GAME_DATA $DIAG_DATA; do echo "$STAGE/$f"; done) \
           "$STAGE/nanocraftdiag.png" "$STAGE/nanocraftdiag.funkey-s.desktop"
 

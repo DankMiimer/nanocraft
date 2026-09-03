@@ -22,7 +22,8 @@ OUT=$HOME/$NAME.opk
 # The game half must be byte-identical to the shipping package, or the
 # diagnostic would be measuring something the tester does not actually run.
 GAME_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-swap.sh"
-GAME_DATA="minecraft.key menubg.raw res240.raw res120.raw
+GAME_DATA="minecraft.key menubg.raw videobg.raw res240.raw res120.raw
+           gsauto.raw gsfit.raw gsstock.raw
            cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
 GAME_PY="quickmenu.py"
 GAME_BIN="nano-clk"
@@ -35,7 +36,7 @@ for f in $GAME_SCRIPTS $GAME_PY $GAME_DATA $GAME_BIN $DIAG_SCRIPTS $DIAG_PY $DIA
   cp "$SRC/$f" "$STAGE/"
 done
 
-for f in menubg.raw diagbg.raw; do
+for f in menubg.raw videobg.raw diagbg.raw; do
   if [ "$(wc -c < "$STAGE/$f")" -ne 115200 ]; then
     echo "ERROR: $f is $(wc -c < "$STAGE/$f") bytes, expected 115200."
     echo "       Rebuild with ./make-menu-bg.sh and ./make-diag-bg.sh"

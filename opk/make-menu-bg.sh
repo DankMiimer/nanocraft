@@ -27,14 +27,32 @@ drawtext=fontfile=menufont.ttf:text='QUICK MENU':fontcolor=0xE8E8E8:fontsize=15:
 drawtext=fontfile=menufont.ttf:text='VOLUME':fontcolor=0xE8E8E8:fontsize=12:x=16:y=38,\
 drawtext=fontfile=menufont.ttf:text='BRIGHT':fontcolor=0xE8E8E8:fontsize=12:x=16:y=62,\
 drawtext=fontfile=menufont.ttf:text='CPU':fontcolor=0xE8E8E8:fontsize=12:x=16:y=86,\
-drawtext=fontfile=menufont.ttf:text='SCREEN':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
+drawtext=fontfile=menufont.ttf:text='VIDEO':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
+drawtext=fontfile=menufont.ttf:text='>':fontcolor=0x7C8AA8:fontsize=12:x=140:y=110,\
 drawtext=fontfile=menufont.ttf:text='RESTART':fontcolor=0xE8E8E8:fontsize=12:x=16:y=134,\
 drawtext=fontfile=menufont.ttf:text='FORCE CLOSE':fontcolor=0xE8E8E8:fontsize=12:x=16:y=158,\
 drawtext=fontfile=menufont.ttf:text='SHUTDOWN':fontcolor=0xE8E8E8:fontsize=12:x=16:y=182,\
-drawtext=fontfile=menufont.ttf:text='RESUME':fontcolor=0xE8E8E8:fontsize=12:x=16:y=206,\
-drawtext=fontfile=menufont.ttf:text='screen needs restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
+drawtext=fontfile=menufont.ttf:text='RESUME':fontcolor=0xE8E8E8:fontsize=12:x=16:y=206" \
   -frames:v 1 menubg.png
 ffmpeg -y -hide_banner -loglevel error -i menubg.png -f rawvideo -pix_fmt rgb565le menubg.raw
+
+# --- the video page -----------------------------------------------------------
+# Same row geometry, so quickmenu.py blits values and draws the cursor with the
+# identical arithmetic and only the background changes. Three rows, then a
+# legend, because AUTO/FIT/STOCK mean nothing on their own -- and the footer that
+# used to sit under SCREEN on the main page, now covering both settings here.
+ffmpeg -y -hide_banner -loglevel error -f lavfi -i "color=c=0x101822:s=240x240" -vf "\
+drawbox=x=0:y=0:w=240:h=28:color=0x2a3550:t=fill,\
+drawtext=fontfile=menufont.ttf:text='VIDEO SETTINGS':fontcolor=0xE8E8E8:fontsize=15:x=(w-text_w)/2:y=6,\
+drawtext=fontfile=menufont.ttf:text='SCREEN':fontcolor=0xE8E8E8:fontsize=12:x=16:y=38,\
+drawtext=fontfile=menufont.ttf:text='GUI SCALE':fontcolor=0xE8E8E8:fontsize=12:x=16:y=62,\
+drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=86,\
+drawtext=fontfile=menufont.ttf:text='AUTO   hotbar always fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=128,\
+drawtext=fontfile=menufont.ttf:text='FIT    bigger, still fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=144,\
+drawtext=fontfile=menufont.ttf:text='STOCK  crisp, clips at 120':fontcolor=0x7C8AA8:fontsize=10:x=16:y=160,\
+drawtext=fontfile=menufont.ttf:text='both need a restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
+  -frames:v 1 videobg.png
+ffmpeg -y -hide_banner -loglevel error -i videobg.png -f rawvideo -pix_fmt rgb565le videobg.raw
 
 # --- value strips -------------------------------------------------------------
 # 76x18, blitted at their row. Same background colour so they sit flush.
@@ -48,6 +66,14 @@ strip() {   # strip <outname> <text> <colour>
 strip res240 "240x240" 0xF0C460
 strip res120 "120x120" 0xF0C460
 
+# Interface scale. AUTO and FIT both always fit; STOCK is the one that can clip,
+# so it gets the warm colour the CPU ladder uses for "past the safe setting".
+# Avoid a colon in any drawtext value: ffmpeg reads it as an option separator
+# even inside quotes, and silently renders only the part before it.
+strip gsauto  "AUTO"  0xF0C460
+strip gsfit   "FIT"   0xF0C460
+strip gsstock "STOCK" 0xF0A050
+
 # The CPU ladder is 48 MHz per step from stock. Stock is shown in a calm colour
 # and every overclock in a warmer one, so the screen itself says when the
 # console is running beyond its specification.
@@ -56,7 +82,9 @@ for m in 1056 1104 1152 1200 1248; do
   strip "cpu$m" "$m MHz" 0xF0A050
 done
 
-echo "wrote menubg.raw ($(wc -c < menubg.raw) bytes, expect 115200)"
-for f in res*.raw cpu*.raw; do
+for f in menubg.raw videobg.raw; do
+  echo "wrote $f ($(wc -c < "$f") bytes, expect 115200)"
+done
+for f in res*.raw gs*.raw cpu*.raw; do
   echo "  $f $(wc -c < "$f") bytes (expect $((76 * 18 * 2)))"
 done

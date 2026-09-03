@@ -42,8 +42,8 @@ pixel is drawn by a software rasterizer.
 
 | Internal resolution | Frame rate | Picture |
 | --- | ---: | --- |
-| **240x240 — recommended** | **7.8 fps** | native, 1:1, nothing clipped |
-| 120x120 | 11.9 fps | soft 2x upscale, hotbar clips at the edges |
+| **240x240 — recommended** | **7.8 fps** | native, 1:1, sharpest |
+| 120x120 | 11.9 fps | soft 2x upscale, interface intact |
 
 **Both figures are in-world**, measured by replaying a recorded real play session
 against the same restored world — not by standing still on a title screen. A
@@ -59,14 +59,35 @@ frame_ms  ~=  70.6  +  0.00094 x pixels
 ```
 
 So resolution alone tops out near 14 fps no matter how far you drop it, while
-120x120 costs you a soft picture and a clipped hotbar for four frames. 240x240
-and 120x120 are the only sizes that divide the panel cleanly; anything between
-them shimmers.
+120x120 costs you a soft picture for four frames. 240x240 and 120x120 are the
+only sizes that divide the panel cleanly; anything between them shimmers.
 
-Switch between them in the quick menu (**L + SELECT → SCREEN**), then pick
-RESTART to apply it — the game reads the size once at startup, so it cannot
+Switch between them in the quick menu (**L + SELECT → VIDEO → SCREEN**), then
+pick RESTART to apply it — the game reads the size once at startup, so it cannot
 change in a running process. Editing
 `/mnt/FunKey/nanocraft/resolution.txt` does the same thing.
+
+### GUI scale
+
+120x120 used to cut the ends off the hotbar. That was never a Minecraft setting
+going wrong: Ninecraft lays the interface out at a scale it computes from the
+window and **floors that scale at 1.0**, and Minecraft's hotbar is 182 interface
+pixels wide, so a 120-pixel-wide screen was simply 62 pixels too narrow for it.
+Nothing in the game's own options could reach it — `gfx_pixeldensity`, despite
+the name, is the touch d-pad's size in pixels per millimetre and is recomputed
+from the window on every launch.
+
+This port's launcher takes the scale from the environment and will go below that
+floor. **VIDEO → GUI SCALE**:
+
+| | What it does |
+| --- | --- |
+| **AUTO** (default) | Shrink only as far as the hotbar needs. Nothing changes at 240x240, which already has room; 120x120 gains a complete interface. |
+| **FIT** | Size the interface to the hotbar in either direction, so it also *grows* into the spare room at 240x240. Bigger, still never clipped. |
+| **STOCK** | One interface pixel per rendered pixel, exactly as Ninecraft ships. Crispest, and clips at 120x120. |
+
+Like SCREEN, it is read at startup, so it takes a RESTART.
+`/mnt/FunKey/nanocraft/guiscale.txt` holds the same value.
 
 **8 fps is what this hardware does.** It is enough to build, explore and potter
 about. It is not enough for combat.
@@ -229,10 +250,19 @@ pick, B to go back.
 | --- | --- |
 | VOLUME / BRIGHT | adjust, immediately |
 | **CPU** | 1008 – 1248 MHz in 48 MHz steps, **applies at once** |
-| **SCREEN** | 240x240 or 120x120 — **needs a restart**, because the game reads the size once at startup |
-| RESTART | relaunch the game, which is how a screen change is applied |
+| **VIDEO** | opens the video page — SCREEN and GUI SCALE |
+| RESTART | relaunch the game, which is how a video change is applied |
 | **FORCE CLOSE** | kills the game — see below |
 | SHUTDOWN / RESUME | leave |
+
+The video page holds the two settings the game reads only at startup, which is
+why they share a page and why it says so at the bottom of it:
+
+| Row | What it does |
+| --- | --- |
+| **SCREEN** | 240x240 or 120x120 — **needs a restart** |
+| **GUI SCALE** | AUTO, FIT or STOCK — **needs a restart**. See [GUI scale](#gui-scale) |
+| BACK | to the main list; B does the same |
 
 **FORCE CLOSE is named for what it does.** It sends `SIGTERM` and then `SIGKILL`,
 so anything since Minecraft's last autosave is lost. To quit with a save, use

@@ -39,18 +39,20 @@ OUT=$HOME/$NAME.opk
 
 PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-swap.sh"
 PAYLOAD_PY="quickmenu.py"
-PAYLOAD_DATA="minecraft.key menubg.raw nanocraft.png nanocraft.funkey-s.desktop
+PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
+              nanocraft.png nanocraft.funkey-s.desktop
               res240.raw res120.raw
+              gsauto.raw gsfit.raw gsstock.raw
               cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
 # nano-clk is a static ARM binary, not a script: it writes the CPU PLL through
 # /dev/mem, which the quick menu's CPU row drives. Static so it depends on
 # nothing - this console is musl and the toolchain is glibc.
 PAYLOAD_BIN="nano-clk"
 
-# menubg.raw is a build product and is not committed, so a fresh clone will not
-# have it. Say so plainly instead of failing on a bare `cp`.
-if [ ! -f "$SRC/menubg.raw" ]; then
-  echo "ERROR: menubg.raw is missing."
+# The rendered menu is a build product and is not committed, so a fresh clone
+# will not have it. Say so plainly instead of failing on a bare `cp`.
+if [ ! -f "$SRC/menubg.raw" ] || [ ! -f "$SRC/videobg.raw" ]; then
+  echo "ERROR: the rendered quick menu is missing."
   echo
   echo "It is generated, not committed. Put a copy of Raster Forge Regular at"
   echo "  $SRC/menufont.ttf"
@@ -71,7 +73,8 @@ done
 # Every value strip the quick menu can blit must be present and whole. A missing
 # one would leave the CPU or screen row blank at exactly the moment someone is
 # trying to read what it is set to.
-for f in res240.raw res120.raw cpu1008.raw cpu1056.raw cpu1104.raw \
+for f in res240.raw res120.raw gsauto.raw gsfit.raw gsstock.raw \
+         cpu1008.raw cpu1056.raw cpu1104.raw \
          cpu1152.raw cpu1200.raw cpu1248.raw; do
   if [ "$(wc -c < "$STAGE/$f")" -ne 2736 ]; then
     echo "ERROR: $f is $(wc -c < "$STAGE/$f") bytes, expected 2736."
@@ -90,14 +93,17 @@ case "$(file -b "$STAGE/nano-clk" 2>/dev/null)" in
      exit 1 ;;
 esac
 
-# menubg.raw is a flat 240x240 RGB565 buffer built by make-menu-bg.sh. Refuse to
-# ship a truncated one: a short read would leave the quick menu half drawn over
-# a frozen game, which is the worst possible moment to discover it.
-if [ "$(wc -c < "$STAGE/menubg.raw")" -ne 115200 ]; then
-  echo "ERROR: menubg.raw is $(wc -c < "$STAGE/menubg.raw") bytes, expected 115200."
-  echo "       Rebuild it with ./make-menu-bg.sh"
-  exit 1
-fi
+# menubg.raw and videobg.raw are flat 240x240 RGB565 buffers built by
+# make-menu-bg.sh. Refuse to ship a truncated one: a short read would leave the
+# quick menu half drawn over a frozen game, which is the worst possible moment
+# to discover it.
+for f in menubg.raw videobg.raw; do
+  if [ "$(wc -c < "$STAGE/$f")" -ne 115200 ]; then
+    echo "ERROR: $f is $(wc -c < "$STAGE/$f") bytes, expected 115200."
+    echo "       Rebuild it with ./make-menu-bg.sh"
+    exit 1
+  fi
+done
 
 # The icon must be 32x32 or GMenu2X shows one corner of it. Read the PNG header
 # rather than trusting the file: this bug ships silently and looks like a broken
@@ -128,7 +134,7 @@ if [ -n "$(tail -c 1 "$DESK")" ]; then
 fi
 for s in $PAYLOAD_SCRIPTS; do sh -n "$STAGE/$s"; done
 python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$STAGE/quickmenu.py"
-echo "ok: .desktop ends with a newline, scripts parse, menubg.raw is intact"
+echo "ok: .desktop ends with a newline, scripts parse, both menu pages are intact"
 
 # Nothing Minecraft, nothing personal, ever. Fail the build rather than trust
 # the file list above.

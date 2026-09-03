@@ -1,5 +1,5 @@
 diff --git a/ninecraft/src/main.c b/ninecraft/src/main.c
-index 81bc733..2b7b095 100644
+index 81bc733..c4889a4 100644
 --- a/ninecraft/src/main.c
 +++ b/ninecraft/src/main.c
 @@ -26,6 +26,7 @@
@@ -70,7 +70,80 @@ index 81bc733..2b7b095 100644
          if (action == SDL_PRESSED) {
              keyboard_feed(game_keycode, 1);
          } else if (action == SDL_RELEASED) {
-@@ -633,8 +673,19 @@ float calculate_scale(int width, int height, float dpi) {
+@@ -623,18 +663,91 @@ void set_ninecraft_size_0_1_0(int width, int height) {
+     }
+ }
+ 
++/* NANOCRAFT: an interface scale the panel can actually hold.
++ *
++ * calculate_scale() floors at 1.0, which is the right floor for a desktop and
++ * the wrong one for a 240x240 handheld rendering at 120x120. Minecraft's hotbar
++ * sprite is 182x22 GUI pixels -- measured at (0,0) of this build's own gui.png,
++ * where the opaque run ends at x=181 and the 24x24 selection box starts on the
++ * next row -- so a 120-pixel-wide screen laid out at scale 1.0 is 62 pixels too
++ * narrow and loses the ends of the hotbar off both sides. Only a scale below
++ * 1.0 makes it fit, and nothing the game itself stores can ask for one:
++ * gfx_pixeldensity is the touch d-pad's size in pixels per millimetre, which
++ * AppPlatform_linux::getPixelsPerMillimeter() recomputes from the window on
++ * every launch, not a UI scale.
++ *
++ * Unset, this changes nothing on any device. "auto" shrinks the interface just
++ * far enough to fit and never enlarges it, which makes it a no-op at 240x240
++ * too, where the fit scale is already 1.3. "fit" sizes the interface to the
++ * hotbar in both directions, so it grows there instead. An explicit number is
++ * taken as given. Anything unparseable leaves upstream's answer alone rather
++ * than guessing at what was meant.
++ */
++#define GUI_HOTBAR_WIDTH 182
++/* Slack, so the truncation in Screen::setSize's width/scale cannot shave the
++ * last column off the hotbar that auto just made room for. */
++#define GUI_AUTO_SLACK 2
++#define GUI_SCALE_MIN 0.25f
++#define GUI_SCALE_MAX 4.0f
++
++static float gui_scale_override(int width, float scale) {
++    static float last_logged = -1.0f;
++    const char *env = getenv("NINECRAFT_GUI_SCALE");
++    if (env == NULL || env[0] == '\0') {
++        return scale;
++    }
++    if (strcmp(env, "auto") == 0 || strcmp(env, "fit") == 0) {
++        /* The largest scale at which the hotbar still spans the screen.
++         * "auto" only ever shrinks, so a screen that already has room -- any
++         * 240x240 one -- keeps exactly the layout it ships with today. "fit"
++         * also grows into that room, which is worth offering on a 1.54-inch
++         * panel where the interface at scale 1.0 is very small. */
++        float fit = (float)width / (float)(GUI_HOTBAR_WIDTH + GUI_AUTO_SLACK);
++        if (env[0] == 'a' && fit >= scale) {
++            return scale;
++        }
++        scale = fit;
++    } else {
++        char *end = NULL;
++        float wanted = strtof(env, &end);
++        if (end == env || wanted <= 0.0f) {
++            return scale;
++        }
++        scale = wanted;
++    }
++    scale = fminf(fmaxf(scale, GUI_SCALE_MIN), GUI_SCALE_MAX);
++    if (scale != last_logged) {
++        last_logged = scale;
++        printf("[gui] NINECRAFT_GUI_SCALE=%s -> scale %.4f, %d px laid out as %d\n",
++               env, scale, width, (int)((float)width / scale));
++        fflush(stdout);
++    }
++    return scale;
++}
++
+ float calculate_scale(int width, int height, float dpi) {
+     float dpi_scale = (dpi <= 0.0f) ? 1.0f : (dpi / 96.0f);
+     float width_scale = (float)width / 1920.0f;
+     float height_scale = (float)height / 1080.0f;
+     float combined_scale = (dpi_scale * 1.2) + ((width_scale + height_scale) * 0.8);
+     combined_scale = fminf(fmaxf(roundf(combined_scale), 1.0f), 4.0f);
+-    return combined_scale;
++    return gui_scale_override(width, combined_scale);
  }
  
  static void set_ninecraft_size(int width, int height) {
@@ -91,7 +164,7 @@ index 81bc733..2b7b095 100644
      } else {
          minecraft_set_size(ninecraft_app, width, height);
      }
-@@ -688,17 +739,48 @@ static void set_ninecraft_size(int width, int height) {
+@@ -688,17 +801,48 @@ static void set_ninecraft_size(int width, int height) {
      } else {
          return;
      }
@@ -143,7 +216,7 @@ index 81bc733..2b7b095 100644
  static void resize_callback(struct SDL_Window *window, int width, int height) {
      if (version_id == version_id_0_1_0) {
          set_ninecraft_size_0_1_0(width, height);
-@@ -1296,6 +1378,9 @@ static bool detect_version() {
+@@ -1296,6 +1440,9 @@ static bool detect_version() {
              version_id = version_id_0_10_4;
          } else if (strcmp(verstr, "v0.10.5 alpha") == 0) {
              version_id = version_id_0_10_5;
@@ -153,7 +226,7 @@ index 81bc733..2b7b095 100644
          } else if (strcmp(verstr, "v0.11.0 alpha") == 0) {
              version_id = version_id_0_11_0;
          } else if (strcmp(verstr, "v0.11.1 alpha") == 0) {
-@@ -1376,6 +1461,8 @@ int main(int argc, char **argv) {
+@@ -1376,6 +1523,8 @@ int main(int argc, char **argv) {
      SDL_Event event;
      char *minecraft_options;
      void *icon_pixels;
@@ -162,7 +235,7 @@ index 81bc733..2b7b095 100644
  
      parse_game_parameters(argc, argv);
  
-@@ -1475,7 +1562,7 @@ int main(int argc, char **argv) {
+@@ -1475,7 +1624,7 @@ int main(int argc, char **argv) {
      _window = SDL_CreateWindow(
          "Ninecraft",
          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -171,7 +244,7 @@ index 81bc733..2b7b095 100644
          SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
      );
      if (!_window) {
-@@ -1687,7 +1774,6 @@ int main(int argc, char **argv) {
+@@ -1687,7 +1836,6 @@ int main(int argc, char **argv) {
      } else {
          ninecraft_app_construct(ninecraft_app);
      }
@@ -179,7 +252,7 @@ index 81bc733..2b7b095 100644
      if (version_id <= version_id_0_10_5) {
          uintptr_t int_off = get_ninecraftapp_internal_storage_offset(version_id);
          uintptr_t ext_off = get_ninecraftapp_external_storage_offset(version_id);
-@@ -1701,7 +1787,6 @@ int main(int argc, char **argv) {
+@@ -1701,7 +1849,6 @@ int main(int argc, char **argv) {
      }
  
      mod_loader_execute_on_minecraft_construct(ninecraft_app, version_id);
@@ -187,7 +260,7 @@ index 81bc733..2b7b095 100644
      if (version_id >= version_id_0_9_0) {
          app_platform_0_9_0_t *plat = malloc(sizeof(app_platform_0_9_0_t));
          app_context_0_9_0_t *context = (app_context_0_9_0_t *)malloc(sizeof(app_context_0_9_0_t));
-@@ -1756,8 +1841,46 @@ int main(int argc, char **argv) {
+@@ -1756,8 +1903,46 @@ int main(int argc, char **argv) {
              platform_vtable_0_10_0.getPixelsPerMillimeter = (void *)AppPlatform_linux$getPixelsPerMillimeter;
              platform_vtable_0_10_0.swapBuffers = (void *)AppPlatform_linux$swapBuffers;
          } else if (version_id >= version_id_0_11_0 && version_id <= version_id_0_11_1) {
@@ -236,7 +309,7 @@ index 81bc733..2b7b095 100644
              platform_vtable_0_11_0.getImagePath = (void *)GET_SYSV_WRAPPER(AppPlatform_linux$getImagePath);
              platform_vtable_0_11_0.loadPNG = (void *)AppPlatform_linux$loadPNG_0_9_0;
              platform_vtable_0_11_0.loadTGA = (void *)AppPlatform_linux$loadTGA_0_9_0;
-@@ -1790,11 +1913,15 @@ int main(int argc, char **argv) {
+@@ -1790,11 +1975,15 @@ int main(int argc, char **argv) {
              platform_vtable_0_11_0.hasHardwareInformationChanged = (void *)AppPlatform_linux$hasHardwareInformationChanged;
              platform_vtable_0_11_0.isTablet = (void *)AppPlatform_linux$isTablet;
              platform_vtable_0_11_0.pickImage = (void *)AppPlatform_linux$pickImage;
@@ -253,7 +326,7 @@ index 81bc733..2b7b095 100644
          }
          context->platform = plat;
  #ifdef _WIN32
-@@ -1852,17 +1979,18 @@ int main(int argc, char **argv) {
+@@ -1852,17 +2041,18 @@ int main(int argc, char **argv) {
      }
  
      mod_loader_execute_on_minecraft_init(ninecraft_app, version_id);
@@ -276,7 +349,7 @@ index 81bc733..2b7b095 100644
      } else if (version_id == version_id_0_10_5) {
          minecraft_isgrabbed_offset = MINECRAFTCLIENT_ISGRABBED_OFFSET_0_10_5;
      } else if (version_id == version_id_0_10_4) {
-@@ -1957,8 +2085,33 @@ int main(int argc, char **argv) {
+@@ -1957,8 +2147,33 @@ int main(int argc, char **argv) {
          minecraft_isgrabbed_offset = MINECRAFT_ISGRABBED_OFFSET_0_1_0;
      }
      
@@ -311,7 +384,7 @@ index 81bc733..2b7b095 100644
              if (!mouse_pointer_hidden) {
                  grab_mouse();
              }
-@@ -1995,8 +2148,11 @@ int main(int argc, char **argv) {
+@@ -1995,8 +2210,11 @@ int main(int argc, char **argv) {
          mod_loader_execute_on_minecraft_update(ninecraft_app, version_id);
  
          audio_engine_tick();
@@ -323,7 +396,7 @@ index 81bc733..2b7b095 100644
          while (SDL_PollEvent(&event)) {
              if (event.type == SDL_QUIT) {
                  running = false;
-@@ -2015,6 +2171,7 @@ int main(int argc, char **argv) {
+@@ -2015,6 +2233,7 @@ int main(int argc, char **argv) {
              }
          }
      }

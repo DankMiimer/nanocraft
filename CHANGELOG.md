@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.0.4
+
+**120x120 no longer clips the hotbar.** It was the one thing keeping the faster
+mode from being recommendable, and it was never a Minecraft setting going wrong.
+
+Ninecraft installs the interface scale itself, from a `calculate_scale()` that
+**floors at 1.0** — a sensible floor for a desktop and 62 pixels too generous
+here, because Minecraft's hotbar is 182 interface pixels wide and a 120-pixel
+screen cannot hold it. Nothing in the game's own options could reach that.
+`gfx_pixeldensity` looks like the right key and is not: the game labels it
+"D-Pad size", it is the touch d-pad's size in pixels per millimetre, and the
+launcher recomputes it from the window as `(w + h) / 2 / 25.4` on every launch,
+so a hand-written value never survives.
+
+- **The launcher now takes its interface scale from `NINECRAFT_GUI_SCALE`** and
+  will go below 1.0. With the variable unset it behaves exactly as upstream
+  does, on any device.
+- **New quick menu VIDEO page**, holding SCREEN — moved off the main list — and
+  a new **GUI SCALE** row: AUTO (shrink only as far as the hotbar needs, so
+  240x240 is untouched and 120x120 fits), FIT (size the interface to the hotbar
+  either way, which is *larger* at 240x240), STOCK (upstream, crispest, clips at
+  120x120). AUTO is the default. Both rows are read at startup, so the page says
+  a restart is needed and the main list's RESTART row does it.
+
+Verified on hardware at 120x120: the launcher reports `scale 0.6522, 120 px laid
+out as 184`, and the hotbar, hearts and chat button are all fully on screen
+where the ends of all three used to run off it. At 240x240 the fit scale is
+1.304, so AUTO returns before touching anything and that mode is unchanged.
+
 ## v1.0.3
 
 - **"CLOSE GAME" is now "FORCE CLOSE".** It sends `SIGTERM` and then `SIGKILL`,

@@ -92,13 +92,44 @@ would give, because **`app+submit` is flat at ~45-49 ms** — that is Minecraft'
 own logic and chunk work on one A7, and no resolution setting touches it. It is
 38% of a 240x240 frame and 53% of a 120x120 one.
 
-Against that, 120x120 costs real things: MCPE scales its GUI to the render
-resolution, and at 120x120 the hotbar counters clip at the screen edges. The MM+
-port documents the same failure mode at 160x120, where Settings and Store fall
-off entirely.
+Against that, 120x120 costs a soft 2x-upscaled picture. It used to cost a
+clipped HUD as well; that is fixed, and the fix is worth recording because the
+cause was not where it looked.
 
-So the trade is a clipped HUD and a soft 2x-upscaled picture for 4 fps. **Play
-at 240x240.** 120x120 is there for anyone who wants it.
+**The clipping was never a Minecraft setting.** Ninecraft installs the interface
+scale itself, in `set_ninecraft_size()`, from
+
+```c
+clamp(round(dpi/96*1.2 + (w/1920 + h/1080)*0.8), 1, 4)
+```
+
+with `dpi` stuck at 96 because SDL's offscreen driver reports none. Both 240x240
+(1.478) and 120x120 (1.339) round to **1.0, the clamp floor**, so the interface
+was laid out 120 logical pixels wide while Minecraft's hotbar sprite is 182x22 —
+measured at (0,0) of this build's `gui.png`, where the opaque run ends at x=181
+and the 24x24 selection box begins on the next row. 62 pixels short, both ends
+off the screen.
+
+No option in `options.txt` could reach it, and the one that looks like it could
+is a trap: `gfx_pixeldensity` is labelled **"D-Pad size"** by the game
+(`options.guiScale=D-pad size`, `options.pixelspermilimeter=D-Pad size`), it is
+the touch d-pad's size in pixels per millimetre, and
+`AppPlatform_linux$getPixelsPerMillimeter()` recomputes it as `(w + h) * 0.5 /
+25.4` on every launch. Two exact matches confirm it: this console stores
+`9.44882` = 240/25.4, and the MM+ options.txt seeded into it stored `7.16535` =
+182/25.4, 182 being the mean of that port's 208x156 window.
+
+So the launcher patch adds `NINECRAFT_GUI_SCALE`, which lets the scale go below
+the floor. At 120x120 `auto` gives 0.6522 and a 184-pixel logical screen — the
+hotbar fits with the two pixels of slack the constant leaves for the truncation
+in `Screen::setSize(width / scale, ...)`. At 240x240 the fit scale is 1.304, so
+`auto` returns before touching anything and that mode is byte-for-byte what it
+was. The MM+ port documented the same failure mode at 160x120, where Settings
+and Store fell off entirely; the same lever would fix it there.
+
+So the trade is now just a soft 2x-upscaled picture for 4 fps. **Play at
+240x240** for the sharper image; 120x120 is a real option rather than a
+compromised one.
 
 The present path is not worth optimising: the RGB565 blit is **1.1 ms**, under
 1% of a frame. `fb_nano.h`'s prediction that it would be cheap is confirmed, and

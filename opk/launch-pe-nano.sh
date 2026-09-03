@@ -73,7 +73,14 @@ export FBEGL_PBO="${FBEGL_PBO:-1}"
 export NINECRAFT_WIDTH="$W"
 export NINECRAFT_HEIGHT="$H"
 
-echo "[pe] ${W}x${H} gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
+# Interface scale. Ninecraft lays the GUI out at a scale it derives from the
+# window and floors at 1.0; that floor leaves a 120x120 screen 62 pixels too
+# narrow for the 182-pixel hotbar, which is why 120x120 used to clip. This
+# launcher takes the scale from here and will go below the floor when asked.
+# "auto" only shrinks when it must, so 240x240 is untouched.
+export NINECRAFT_GUI_SCALE="${NINECRAFT_GUI_SCALE:-auto}"
+
+echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
 
 exec "$LOADER" --library-path "$LP" \
   "$D/ninecraft" --game "$GAME" --home "$D/home"

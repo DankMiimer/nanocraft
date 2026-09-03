@@ -128,21 +128,30 @@ restore_clock() {
 # cannot be changed in a running process.
 GAME=
 start_game() {
-  # 240x240 is native and the default. 120x120 buys about 4 fps but clips the
-  # hotbar, because Minecraft scales its GUI to the render size. Only those two
+  # 240x240 is native and the default. 120x120 buys about 4 fps. Only those two
   # divide the panel cleanly; anything between them shimmers.
   W=240; H=240
   [ -f "$DATA/resolution.txt" ] && read W H < "$DATA/resolution.txt" 2>/dev/null
   case "$W" in ''|*[!0-9]*) W=240; H=240 ;; esac
   case "$H" in ''|*[!0-9]*) W=240; H=240 ;; esac
-  echo "[opk] starting at ${W}x${H}" >> "$LOG"
+
+  # Interface scale, from the quick menu's video page. 120x120 used to clip the
+  # hotbar because Ninecraft floors its GUI scale at 1.0 and a 182-pixel hotbar
+  # does not fit in 120; the patched launcher will go below that floor. "auto"
+  # shrinks only when it must, so it changes nothing at 240x240. Anything the
+  # launcher cannot parse is ignored there, but keep the obvious junk out.
+  GS=auto
+  [ -f "$DATA/guiscale.txt" ] && read GS < "$DATA/guiscale.txt" 2>/dev/null
+  case "$GS" in ''|*[!0-9a-z.]*) GS=auto ;; esac
+  echo "[opk] starting at ${W}x${H} gui=$GS" >> "$LOG"
 
   # MIYOO_NO_GRAB=1 is what makes the quick menu possible. Ninecraft would
   # otherwise take an exclusive EVIOCGRAB on /dev/input/event0 and no other
   # process could read the buttons. Releasing it costs nothing here: the grab
   # exists to keep a front end from also seeing input, and no front end is
   # running while an OPK has the screen.
-  MCPE_DATA="$DATA" NINECRAFT_WIDTH="$W" NINECRAFT_HEIGHT="$H" MIYOO_NO_GRAB=1 \
+  MCPE_DATA="$DATA" NINECRAFT_WIDTH="$W" NINECRAFT_HEIGHT="$H" \
+    NINECRAFT_GUI_SCALE="$GS" MIYOO_NO_GRAB=1 \
     sh "$APP_DIR/launch-pe-nano.sh" "$DATA/game081" >> "$LOG" 2>&1 &
   GAME=$!
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.3
+
+- **"CLOSE GAME" is now "FORCE CLOSE".** It sends `SIGTERM` and then `SIGKILL`,
+  so anything since Minecraft's last autosave is lost — the old label implied a
+  tidier exit than it performs. RESTART and SHUTDOWN end the game the same way.
+  To quit with a save, leave the world through the game's own pause menu
+  (**L + START**). Documented rather than only renamed.
+
 ## v1.0.2
 
 The quick menu gained the two settings worth having, and both are applied from

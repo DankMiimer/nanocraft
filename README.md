@@ -231,7 +231,13 @@ pick, B to go back.
 | **CPU** | 1008 – 1248 MHz in 48 MHz steps, **applies at once** |
 | **SCREEN** | 240x240 or 120x120 — **needs a restart**, because the game reads the size once at startup |
 | RESTART | relaunch the game, which is how a screen change is applied |
-| CLOSE GAME / SHUTDOWN / RESUME | leave |
+| **FORCE CLOSE** | kills the game — see below |
+| SHUTDOWN / RESUME | leave |
+
+**FORCE CLOSE is named for what it does.** It sends `SIGTERM` and then `SIGKILL`,
+so anything since Minecraft's last autosave is lost. To quit with a save, use
+the game's own pause menu (**L + START**) and leave the world from there.
+RESTART and SHUTDOWN close the game the same way, so the same applies.
 
 This exists because on this OS **the power menu is drawn by whatever app is in
 the foreground**, not by the system — so a game either provides one or you get

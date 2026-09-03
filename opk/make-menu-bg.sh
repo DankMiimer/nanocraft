@@ -29,7 +29,7 @@ drawtext=fontfile=menufont.ttf:text='BRIGHT':fontcolor=0xE8E8E8:fontsize=12:x=16
 drawtext=fontfile=menufont.ttf:text='CPU':fontcolor=0xE8E8E8:fontsize=12:x=16:y=86,\
 drawtext=fontfile=menufont.ttf:text='SCREEN':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
 drawtext=fontfile=menufont.ttf:text='RESTART':fontcolor=0xE8E8E8:fontsize=12:x=16:y=134,\
-drawtext=fontfile=menufont.ttf:text='CLOSE GAME':fontcolor=0xE8E8E8:fontsize=12:x=16:y=158,\
+drawtext=fontfile=menufont.ttf:text='FORCE CLOSE':fontcolor=0xE8E8E8:fontsize=12:x=16:y=158,\
 drawtext=fontfile=menufont.ttf:text='SHUTDOWN':fontcolor=0xE8E8E8:fontsize=12:x=16:y=182,\
 drawtext=fontfile=menufont.ttf:text='RESUME':fontcolor=0xE8E8E8:fontsize=12:x=16:y=206,\
 drawtext=fontfile=menufont.ttf:text='screen needs restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \

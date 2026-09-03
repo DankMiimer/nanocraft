@@ -49,6 +49,10 @@ DATA = os.environ.get("MCPE_DATA", "/mnt/FunKey/nanocraft")
 RESFILE = os.path.join(DATA, "resolution.txt")
 IDLE_TIMEOUT = 90.0          # never leave the console wedged in the menu
 
+# CLOSE is labelled "FORCE CLOSE" on screen, and the name is accurate: it sends
+# SIGTERM and then SIGKILL. Minecraft autosaves as it goes, but anything since
+# the last autosave is lost. Quitting through the game's own pause menu
+# (L+START) is the route that saves first.
 VOLUME, BRIGHT, CPU, SCREEN, RESTART, CLOSE, SHUTDOWN, RESUME = range(8)
 ROW_TOP = [34, 58, 82, 106, 130, 154, 178, 202]
 ROW_H = 22

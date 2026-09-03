@@ -78,6 +78,15 @@ if [ ! -f "$GAMEOPTS" ]; then
   echo "[opk] seeded performance options for a fresh install" >> "$LOG"
 fi
 
+# --- memory ------------------------------------------------------------------
+# Entering a world needs about 68 MB of anonymous memory (measured: 40 MB
+# resident plus 28 MB swapped) on a console with 56 MB of RAM. With the stock
+# 128 MB swap partition that is fine and this does nothing but log three
+# numbers. On a console with little or no swap the menus still fit and the game
+# dies the moment a world loads, which is a confusing way to fail -- so provide
+# swap rather than let that happen.
+sh "$APP_DIR/ensure-swap.sh" "$DATA" >> "$LOG" 2>&1
+
 # --- resolution --------------------------------------------------------------
 # 240x240 is native and the default. 120x120 buys about 4 fps but clips the
 # hotbar, because Minecraft scales its GUI to the render size. Only those two
@@ -171,8 +180,20 @@ trap on_power USR1
 # enough - it does not run on SIGKILL, and a console left holding NanoCraft's
 # keymap has an unusable front end. This watches the game instead, so it fires
 # even if the shell above it is killed outright.
+release_swap() {
+  [ -f "$DATA/.swap-loop" ] || return 0
+  _l=$(cat "$DATA/.swap-loop" 2>/dev/null)
+  [ -n "$_l" ] || return 0
+  swapoff "$_l" 2>/dev/null
+  losetup -d "$_l" 2>/dev/null
+  rm -f "$DATA/.swap-loop"
+  # The backing file stays: creating it is the slow part, and reusing it makes
+  # every later launch instant.
+}
+
 ( while kill -0 "$GAME" 2>/dev/null; do sleep 5; done
-  [ -x "$KEYMAP" ] && "$KEYMAP" default ) >/dev/null 2>&1 &
+  [ -x "$KEYMAP" ] && "$KEYMAP" default
+  release_swap ) >/dev/null 2>&1 &
 
 # WAIT IN A LOOP, because `wait` returns as soon as a trapped signal has been
 # handled - it does not resume. With a bare `wait` the first menu press fell
@@ -186,5 +207,6 @@ while kill -0 "$GAME" 2>/dev/null; do
   RC=$?
 done
 [ -x "$KEYMAP" ] && "$KEYMAP" default
+release_swap
 echo "[opk] exit rc=$RC" >> "$LOG"
 exit "$RC"

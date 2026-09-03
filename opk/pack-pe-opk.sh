@@ -37,7 +37,7 @@ NAME=NanoCraft_funkey-s
 STAGE=$HOME/.nanocraft-opk-stage
 OUT=$HOME/$NAME.opk
 
-PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh"
+PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-swap.sh"
 PAYLOAD_PY="quickmenu.py"
 PAYLOAD_DATA="minecraft.key menubg.raw nanocraft.png nanocraft.funkey-s.desktop"
 

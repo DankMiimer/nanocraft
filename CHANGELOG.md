@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.0.1
+
+Driven by the first outside test report — a FunKey S owner whose menus worked
+and whose Play exited with `rc=139`.
+
+- **The launcher now provides swap when the console is short of it.** Entering a
+  world needs about 68 MB of anonymous memory (40 MB resident + 28 MB swapped,
+  measured) on hardware with 56 MB of RAM. The RG Nano's stock image has a
+  128 MB swap partition and earlier versions simply assumed one. Where swap is
+  adequate this does nothing; where it is not, menus fit and worlds do not,
+  which fails in a thoroughly confusing way.
+- **Every launch now logs its memory situation and the game library's identity**
+  — size and sha256 — so a bug report carries the facts needed to triage it
+  without a second round trip.
+- Documented that both 0.8.1 APKs in the widely mirrored archive.org set contain
+  a library byte-identical to the tested one, so a mismatched APK can be ruled
+  out quickly.
+
+**Not claimed:** that this fixes the FunKey S report. The tester's segfault
+could not be reproduced here — removing swap from an RG Nano wedges it rather
+than segfaulting it. The memory arithmetic stands on its own; whether it is
+their bug is still unconfirmed.
+
 ## v1.0.0
 
 First release. Minecraft Pocket Edition 0.8.1 on the Anbernic RG Nano.

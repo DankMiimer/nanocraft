@@ -118,27 +118,42 @@ OS image, not the content.
 (The installer still records that size and sha256 into `install.log`, because
 ruling this out in one line is worth the second it costs.)
 
-### Current suspect: no swap
+### What is measured, and what shipped
 
-On an RG Nano, in a world, NanoCraft uses about **40 MB resident and 28 MB of
-swap**. The Nano's stock image provides a 128 MB swap partition
-(`/dev/mmcblk0p3`) and NanoCraft simply relies on it — it never creates swap of
-its own.
+Measured on an RG Nano, which is the same hardware class:
 
-**If a FunKey S image has no swap partition, that 28 MB has nowhere to go.**
-Menus are much lighter than a world, which fits the symptom exactly: everything
-works until the moment the game actually loads terrain, and then it dies.
+| | Resident | Swapped | Total anonymous |
+| --- | ---: | ---: | ---: |
+| Title screen | 37 MB | 5 MB | 42 MB |
+| **In a world** | 40 MB | 28 MB | **68 MB** |
 
-That is a hypothesis, not a finding. The two commands that would settle it:
+The console has **56 MB of RAM**, of which roughly 41 MB is available to the
+game. So **entering a world needs about 27 MB more than RAM alone can provide**,
+on any console of this class. The RG Nano's stock image happens to include a
+128 MB swap partition, and earlier versions of NanoCraft simply assumed it.
 
-```sh
-free -m
-cat /proc/swaps
+Menus fit in RAM; a world does not. A console short of swap therefore shows
+every menu perfectly and dies the moment terrain loads — which is exactly the
+reported symptom.
+
+**Since v1.0.1 NanoCraft checks, and provides swap when the system is short**
+(`opk/ensure-swap.sh`). On a console with adequate swap it reads
+`/proc/meminfo`, logs three numbers and does nothing. `/mnt` is vfat and Linux
+will not swap to a file on vfat, so it loops the file through a block device —
+and it has to find a free one, because the running OPK is itself a loop-mounted
+squashfs occupying `/dev/loop0`.
+
+**Honesty about what this does not prove.** I could not reproduce the tester's
+`rc=139` on my own hardware. Taking swap away from an RG Nano makes it *wedge*
+under memory pressure rather than segfault — a different failure. So the memory
+arithmetic above is solid and the guard is worth having regardless, but whether
+it is *their* bug is unconfirmed. Every launch now logs
+
+```text
+[mem] RAM 55 MB total, 36 MB available; swap 127 MB
 ```
 
-If that is the cause, the fix is for NanoCraft to create its own swap file when
-the system has none — which is what the Miyoo Mini Plus port already does for
-the same reason.
+so the next report will contain the answer whether or not anyone thinks to ask.
 
 Everything else about a FunKey S looks compatible — same FunKey-OS, same
 `fkgpiod`, same 240x240 panel, same Allwinner V3s family, and this package is

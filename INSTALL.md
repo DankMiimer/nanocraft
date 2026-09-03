@@ -122,24 +122,37 @@ archive.org set match them exactly. So if your hash matches, **the APK is not
 your problem** and this is not the answer.
 
 **Then check memory.** In a world this port uses about 40 MB resident and
-**28 MB of swap**. It never creates swap itself — it relies on the console
-already having some, which an RG Nano does (a 128 MB partition). On a system
-with no swap, menus fit and a world does not, which looks exactly like "Play
-exits".
+**28 MB of swap** — roughly 27 MB more than this hardware's RAM can supply on
+its own. Menus fit; a world does not.
 
-```sh
-free -m
-cat /proc/swaps
+Since v1.0.1 the launcher handles this itself. Every run logs its memory
+situation to `run.log`:
+
+```text
+[mem] RAM 55 MB total, 36 MB available; swap 127 MB
+[mem] swap is sufficient (>= 64 MB), nothing to do
 ```
 
-An empty `/proc/swaps` on a 64 MB console is very likely the cause. Please
-include both outputs in a report — that is the single most useful thing you can
-send.
+If your console is short of swap you will instead see it provide some:
+
+```text
+[mem] swap is short: 0 MB < 64 MB needed to load a world
+[mem] providing 128 MB of swap in /mnt/FunKey/nanocraft/nanocraft.swap
+[mem] swap enabled on /dev/loop1; total now 127 MB
+```
+
+That file is created once and reused, and it is released when you quit. It costs
+128 MB of card space; delete it if you want the space back and the launcher will
+make it again if it is ever needed.
+
+**Please include those `[mem]` lines in any report** — they are the single most
+useful thing you can send.
 
 ## Uninstall
 
 Delete `/mnt/Native games/NanoCraft_funkey-s.opk`, its `.png`, and
-`/mnt/FunKey/nanocraft/`.
+`/mnt/FunKey/nanocraft/` (which includes `nanocraft.swap` if the launcher ever
+had to create one).
 
 **Your worlds live in `/mnt/FunKey/nanocraft/home/`** — copy that somewhere first
 if you want to keep them.

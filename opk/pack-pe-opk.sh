@@ -43,6 +43,7 @@ PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
               nanocraft.png nanocraft.funkey-s.desktop
               res240.raw res120.raw
               gsauto.raw gsfit.raw gsstock.raw
+              fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw
               cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
 # nano-clk is a static ARM binary, not a script: it writes the CPU PLL through
 # /dev/mem, which the quick menu's CPU row drives. Static so it depends on
@@ -74,6 +75,7 @@ done
 # one would leave the CPU or screen row blank at exactly the moment someone is
 # trying to read what it is set to.
 for f in res240.raw res120.raw gsauto.raw gsfit.raw gsstock.raw \
+         fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw \
          cpu1008.raw cpu1056.raw cpu1104.raw \
          cpu1152.raw cpu1200.raw cpu1248.raw; do
   if [ "$(wc -c < "$STAGE/$f")" -ne 2736 ]; then

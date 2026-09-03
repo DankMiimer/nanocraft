@@ -93,6 +93,30 @@ floor. **VIDEO → GUI SCALE**:
 Like SCREEN, it is read at startup, so it takes a RESTART.
 `/mnt/FunKey/nanocraft/guiscale.txt` holds the same value.
 
+### Field of view
+
+**VIDEO → FOV**, 50 to 100 degrees. **70 is what Minecraft ships with**, and
+choosing 70 changes nothing at all.
+
+Pocket Edition 0.8.1 has no FOV setting — its entire settings vocabulary is 21
+keys and none of them is one. (`assets/lang/en_US.lang` does contain
+`options.fov=FOV`, but that file is inherited desktop-Minecraft boilerplate; it
+also offers 3D Anaglyph and warns you about 64-bit *Java* installs. A string
+there is not evidence the game implements anything.)
+
+What the engine does have is `GameRenderer::getFov()`, whose result
+`setupCamera()` hands straight to `gluPerspective`, and whose base angle is a
+single number sitting in the code. This port's launcher rewrites that one
+number at startup. That is exactly what Minecraft's own FOV slider does, so the
+sprint and low-health effects still apply on top of whatever you pick, and the
+item in your hand keeps its own fixed angle — which is why it does not distort
+when you go wide, the same as in vanilla.
+
+A narrow angle magnifies distant things; a wide one shows far more around you
+at the cost of stretching the edges. Neither is faster: the same world is drawn
+either way. Read at startup, so it takes a RESTART, and
+`/mnt/FunKey/nanocraft/fov.txt` holds the same value.
+
 **8 fps is what this hardware does.** It is enough to build, explore and potter
 about. It is not enough for combat.
 
@@ -254,18 +278,19 @@ pick, B to go back.
 | --- | --- |
 | VOLUME / BRIGHT | adjust, immediately |
 | **CPU** | 1008 – 1248 MHz in 48 MHz steps, **applies at once** |
-| **VIDEO** | opens the video page — SCREEN and GUI SCALE |
+| **VIDEO** | opens the video page — SCREEN, GUI SCALE and FOV |
 | RESTART | relaunch the game, which is how a video change is applied |
 | **FORCE CLOSE** | kills the game — see below |
 | SHUTDOWN / RESUME | leave |
 
-The video page holds the two settings the game reads only at startup, which is
-why they share a page and why it says so at the bottom of it:
+The video page holds the settings the game reads only at startup, which is why
+they share a page and why it says so at the bottom of it:
 
 | Row | What it does |
 | --- | --- |
 | **SCREEN** | 240x240 or 120x120 — **needs a restart** |
 | **GUI SCALE** | AUTO, FIT or STOCK — **needs a restart**. See [GUI scale](#gui-scale) |
+| **FOV** | 50 to 100 degrees, 70 is stock — **needs a restart**. See [Field of view](#field-of-view) |
 | BACK | to the main list; B does the same |
 
 **FORCE CLOSE is named for what it does.** It sends `SIGTERM` and then `SIGKILL`,

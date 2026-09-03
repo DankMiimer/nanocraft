@@ -2,6 +2,29 @@
 
 ## v1.0.5
 
+**A field of view setting, in a game that does not have one.**
+
+Pocket Edition 0.8.1's entire settings vocabulary is 21 keys and none of them is
+FOV. `en_US.lang` carries `options.fov=FOV`, but that file is inherited
+desktop-Minecraft boilerplate sitting beside 3D Anaglyph and a warning about
+64-bit *Java* installs, so a string there proves nothing.
+
+`GameRenderer::getFov()` is exported, though, and `setupCamera()` hands its
+result straight to `gluPerspective` — and the base angle is a single `70.0f`
+literal in the code. The launcher now rewrites that one number, which is exactly
+what Minecraft's own slider does: the sprint and low-health effects stay
+multiplicative on top of the new base instead of being scaled along with it. The
+held item keeps its own fixed angle, as it does in vanilla, so your hand does not
+distort at the wide end.
+
+**VIDEO → FOV**, 50 to 100 degrees. **70 is stock and patches nothing at all**,
+so a console nobody has touched renders identically to one running a build
+without any of this. Needs a restart, like the rest of that page.
+
+The literal is found by scanning for the single word reading exactly 70.0f
+rather than by a hardcoded offset, and a library where it is missing or not
+unique is left alone rather than written into.
+
 **120x120 is now the default, with GUI SCALE on FIT.**
 
 v1.0.4 removed the only real objection to the faster mode — a hotbar with both

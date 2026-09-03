@@ -7,9 +7,10 @@
 # these and draws only what changes -- the cursor and the two bars -- as plain
 # rectangles. That keeps the on-device code to arithmetic and one memcpy.
 #
-# VALUE STRIPS. Two rows show a setting rather than a bar, and text cannot be
-# drawn on the device, so every reading is baked here and the menu blits
-# whichever applies: res240/res120 for the screen, and one per CPU step.
+# VALUE STRIPS. Several rows show a setting rather than a bar, and text cannot
+# be drawn on the device, so every reading either row can show is baked here and
+# the menu blits whichever applies: res240/res120 for the screen, one per
+# interface scale, one per field of view, and one per CPU step.
 #
 # FONT: Raster Forge Regular (menufont.ttf), chosen by the project owner. Only
 # the RENDERED buffers ship -- the .ttf is a build input, not a runtime asset,
@@ -38,19 +39,22 @@ ffmpeg -y -hide_banner -loglevel error -i menubg.png -f rawvideo -pix_fmt rgb565
 
 # --- the video page -----------------------------------------------------------
 # Same row geometry, so quickmenu.py blits values and draws the cursor with the
-# identical arithmetic and only the background changes. Three rows, then a
-# legend, because AUTO/FIT/STOCK mean nothing on their own -- and the footer that
-# used to sit under SCREEN on the main page, now covering both settings here.
+# identical arithmetic and only the background changes. Four rows, then a
+# legend, because AUTO/FIT/STOCK say nothing on their own and a bare 70 does not
+# say it is the stock angle -- and the footer that used to sit under SCREEN on
+# the main page, now covering every setting here.
 ffmpeg -y -hide_banner -loglevel error -f lavfi -i "color=c=0x101822:s=240x240" -vf "\
 drawbox=x=0:y=0:w=240:h=28:color=0x2a3550:t=fill,\
 drawtext=fontfile=menufont.ttf:text='VIDEO SETTINGS':fontcolor=0xE8E8E8:fontsize=15:x=(w-text_w)/2:y=6,\
 drawtext=fontfile=menufont.ttf:text='SCREEN':fontcolor=0xE8E8E8:fontsize=12:x=16:y=38,\
 drawtext=fontfile=menufont.ttf:text='GUI SCALE':fontcolor=0xE8E8E8:fontsize=12:x=16:y=62,\
-drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=86,\
-drawtext=fontfile=menufont.ttf:text='AUTO   hotbar always fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=128,\
-drawtext=fontfile=menufont.ttf:text='FIT    bigger, still fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=144,\
-drawtext=fontfile=menufont.ttf:text='STOCK  crisp, clips at 120':fontcolor=0x7C8AA8:fontsize=10:x=16:y=160,\
-drawtext=fontfile=menufont.ttf:text='both need a restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
+drawtext=fontfile=menufont.ttf:text='FOV':fontcolor=0xE8E8E8:fontsize=12:x=16:y=86,\
+drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
+drawtext=fontfile=menufont.ttf:text='AUTO   hotbar always fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=144,\
+drawtext=fontfile=menufont.ttf:text='FIT    bigger, still fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=158,\
+drawtext=fontfile=menufont.ttf:text='STOCK  crisp, clips at 120':fontcolor=0x7C8AA8:fontsize=10:x=16:y=172,\
+drawtext=fontfile=menufont.ttf:text='FOV    70 is what the game ships':fontcolor=0x7C8AA8:fontsize=10:x=16:y=190,\
+drawtext=fontfile=menufont.ttf:text='all three need a restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
   -frames:v 1 videobg.png
 ffmpeg -y -hide_banner -loglevel error -i videobg.png -f rawvideo -pix_fmt rgb565le videobg.raw
 
@@ -74,6 +78,14 @@ strip gsauto  "AUTO"  0xF0C460
 strip gsfit   "FIT"   0xF0C460
 strip gsstock "STOCK" 0xF0A050
 
+# Field of view. 70 is the angle the game ships with and asking for it patches
+# nothing, so it gets the calm colour the CPU ladder uses for stock and every
+# other angle gets the gold the rest of this page uses for a chosen value.
+strip fov70 "70" 0x9AA8C0
+for f in 50 60 80 90 100; do
+  strip "fov$f" "$f" 0xF0C460
+done
+
 # The CPU ladder is 48 MHz per step from stock. Stock is shown in a calm colour
 # and every overclock in a warmer one, so the screen itself says when the
 # console is running beyond its specification.
@@ -85,6 +97,6 @@ done
 for f in menubg.raw videobg.raw; do
   echo "wrote $f ($(wc -c < "$f") bytes, expect 115200)"
 done
-for f in res*.raw gs*.raw cpu*.raw; do
+for f in res*.raw gs*.raw fov*.raw cpu*.raw; do
   echo "  $f $(wc -c < "$f") bytes (expect $((76 * 18 * 2)))"
 done

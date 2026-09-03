@@ -81,7 +81,13 @@ export NINECRAFT_HEIGHT="$H"
 # so it fits at 120x120 and fills the spare room at 240x240.
 export NINECRAFT_GUI_SCALE="${NINECRAFT_GUI_SCALE:-fit}"
 
-echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
+# Field of view. 0.8.1 has no such setting -- the launcher rewrites the base
+# angle inside GameRenderer::getFov, which is where the projection actually
+# comes from. 70 is what the game ships with, and asking for 70 patches nothing
+# at all, so this default leaves an untouched console byte-for-byte stock.
+export NINECRAFT_FOV="${NINECRAFT_FOV:-70}"
+
+echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE fov=$NINECRAFT_FOV gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
 
 exec "$LOADER" --library-path "$LP" \
   "$D/ninecraft" --game "$GAME" --home "$D/home"

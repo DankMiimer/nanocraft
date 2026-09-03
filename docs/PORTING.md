@@ -132,6 +132,51 @@ frames is worth more than sharpness. **120x120 became the default in v1.0.5**;
 240x240 stays one row away in the quick menu for anyone who would rather have
 the native image.
 
+### Field of view, in a build with no FOV setting
+
+The same lesson as the hotbar, generalised: **the absence of an option key does
+not mean the absence of a lever.** The engine's option table has no FOV entry
+and `en_US.lang`'s `options.fov=FOV` is inherited desktop boilerplate, so there
+is nothing to write. But the projection has to come from somewhere, and it comes
+from here:
+
+```text
+GameRenderer::setupCamera(float, int)
+  ...
+  13c44c: bl 13bcb8 <GameRenderer::getFov(float, bool)>
+  ...
+  13c47a: bl 150ae8 <gluPerspective(float, float, float, float)>
+```
+
+`getFov` is exported, and its first instruction pair loads the base angle out of
+the literal pool:
+
+```text
+13bcb8: push  {r3, r4, r5, lr}
+13bcbe: vmov  s17, r1                 @ partialTicks -- softfp, so r1
+13bcc2: vldr  s16, [pc, #144]         @ 13bd54 -> 0x428c0000 = 70.0f
+```
+
+Everything after that is modifiers layered on the value in s16: `vmovne s16,
+s15` swaps in 60.0f on one condition, `500/(x+500)` is the low-health wobble,
+and the tail interpolates the sprint effect from the pair of floats at
+GameRenderer+0x60/+0x64. **So rewriting the literal changes the base and leaves
+every modifier multiplicative on top of it — which is what Minecraft's own
+slider does, and is why scaling `getFov`'s return value instead would be wrong.**
+
+The whole binary contains exactly **two** words equal to 70.0f: this one, and
+one inside `ItemInHandRenderer::render` for the held-item viewmodel. Vanilla
+holds that second one fixed while the slider moves, which is why the hand does
+not distort at wide angles, so leaving it alone is correct rather than an
+oversight.
+
+`NINECRAFT_FOV` therefore does one 4-byte write: resolve the symbol, scan a
+64-word window for the single value reading exactly 70.0f (refusing if it is
+absent or not unique, so a differently-built APK is left alone rather than
+having an instruction corrupted), `mprotect` the page, store, restore. Asking
+for 70 skips even that. Verified on the console at 40, 70 and 100 degrees
+against the same world and spawn.
+
 The present path is not worth optimising: the RGB565 blit is **1.1 ms**, under
 1% of a frame. `fb_nano.h`'s prediction that it would be cheap is confirmed, and
 the async PBO path makes no measurable difference on one core (26.35 fps without

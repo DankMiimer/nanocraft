@@ -148,7 +148,15 @@ start_game() {
   GS=fit
   [ -f "$DATA/guiscale.txt" ] && read GS < "$DATA/guiscale.txt" 2>/dev/null
   case "$GS" in ''|*[!0-9a-z.]*) GS=fit ;; esac
-  echo "[opk] starting at ${W}x${H} gui=$GS" >> "$LOG"
+
+  # Field of view, also from the video page. The game has no FOV setting; the
+  # launcher rewrites the base angle inside GameRenderer::getFov, which is where
+  # setupCamera gets the projection from. 70 is the stock angle and asking for
+  # it patches nothing, so an untouched console stays exactly as it was.
+  FOV=70
+  [ -f "$DATA/fov.txt" ] && read FOV < "$DATA/fov.txt" 2>/dev/null
+  case "$FOV" in ''|*[!0-9]*) FOV=70 ;; esac
+  echo "[opk] starting at ${W}x${H} gui=$GS fov=$FOV" >> "$LOG"
 
   # MIYOO_NO_GRAB=1 is what makes the quick menu possible. Ninecraft would
   # otherwise take an exclusive EVIOCGRAB on /dev/input/event0 and no other
@@ -156,7 +164,7 @@ start_game() {
   # exists to keep a front end from also seeing input, and no front end is
   # running while an OPK has the screen.
   MCPE_DATA="$DATA" NINECRAFT_WIDTH="$W" NINECRAFT_HEIGHT="$H" \
-    NINECRAFT_GUI_SCALE="$GS" MIYOO_NO_GRAB=1 \
+    NINECRAFT_GUI_SCALE="$GS" NINECRAFT_FOV="$FOV" MIYOO_NO_GRAB=1 \
     sh "$APP_DIR/launch-pe-nano.sh" "$DATA/game081" >> "$LOG" 2>&1 &
   GAME=$!
 

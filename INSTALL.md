@@ -81,6 +81,11 @@ it into the spare room at 240x240), `auto` (shrink only when it must, so
 240x240 is left as older versions drew it) or a number. Also on the quick menu's
 VIDEO page.
 
+**Field of view.** `/mnt/FunKey/nanocraft/fov.txt` holds an angle in degrees
+from 50 to 100. 70 is what Minecraft ships with and is the default; choosing it
+changes nothing. The game itself has no FOV setting — the launcher rewrites the
+angle the renderer uses. Also on the quick menu's VIDEO page.
+
 **Controls.** Drop your own `minecraft.key` into `/mnt/FunKey/nanocraft/` and it
 overrides the packaged one. Verify any edit with `keymap save`, because
 `fkgpiod`'s config parser is off by one above key code 96 — see

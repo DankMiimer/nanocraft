@@ -99,30 +99,51 @@ So the hard parts port cleanly. Their log shows the framebuffer at 240x240, the
 RGB565 presenter running, llvmpipe rendering and the buttons arriving correctly
 — then `rc=139`, which is a **segfault**, at the moment Play is pressed.
 
-That is consistent with the platform being fine and something else being wrong.
-The leading suspect is **which 0.8.1 you have**, not which console.
+### Ruled out: the APK
 
-**Not every "0.8.1" APK is the same build.** Ninecraft reads the game's own C++
-objects at *hard-coded byte offsets*, and those were validated against one
-specific library. A different build of the same version number can show every
-menu perfectly and then fault the instant those offsets are used for real —
-which is exactly the menu-to-world transition.
-
-The build this port is tested against:
+My first guess was that they had a different build of 0.8.1, because Ninecraft
+reads the game's C++ objects at hard-coded byte offsets that were validated
+against one specific library. **That guess was wrong.** Both 0.8.1 APKs from the
+archive.org set contain a `libminecraftpe.so` that is **byte-identical** to the
+one this port was tested against:
 
 ```text
 libminecraftpe.so   9,668,996 bytes
 sha256              baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
 ```
 
-The installer now prints the size and sha256 of whatever you gave it into
-`install.log`, and says so when it is not that build. **If Play exits for you,
-check those two lines first.**
+Same game, same file, different result. So the difference is the console or its
+OS image, not the content.
+
+(The installer still records that size and sha256 into `install.log`, because
+ruling this out in one line is worth the second it costs.)
+
+### Current suspect: no swap
+
+On an RG Nano, in a world, NanoCraft uses about **40 MB resident and 28 MB of
+swap**. The Nano's stock image provides a 128 MB swap partition
+(`/dev/mmcblk0p3`) and NanoCraft simply relies on it — it never creates swap of
+its own.
+
+**If a FunKey S image has no swap partition, that 28 MB has nowhere to go.**
+Menus are much lighter than a world, which fits the symptom exactly: everything
+works until the moment the game actually loads terrain, and then it dies.
+
+That is a hypothesis, not a finding. The two commands that would settle it:
+
+```sh
+free -m
+cat /proc/swaps
+```
+
+If that is the cause, the fix is for NanoCraft to create its own swap file when
+the system has none — which is what the Miyoo Mini Plus port already does for
+the same reason.
 
 Everything else about a FunKey S looks compatible — same FunKey-OS, same
-`fkgpiod`, same 240x240 panel, same Allwinner V3s family and RAM class, and this
-package is already named `.funkey-s.desktop` because that is the suffix the OS
-wants on both. Reports welcome either way.
+`fkgpiod`, same 240x240 panel, same Allwinner V3s family, and this package is
+already named `.funkey-s.desktop` because that is the suffix the OS wants on
+both. Reports welcome either way.
 
 ## Install
 

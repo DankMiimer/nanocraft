@@ -107,22 +107,34 @@ Logs are written to `/mnt/FunKey/nanocraft/`:
 `run.log` ending in `[opk] exit rc=139` means the game **segfaulted** (139 is
 128 + signal 11), not that it quit.
 
-**Not every APK labelled 0.8.1 is the same build.** Ninecraft reads the game's
-own C++ objects at hard-coded byte offsets, validated against one specific
-library. A different build of the same version can render every menu correctly
-and then fault the moment those offsets are used for real — which is the
-menu-to-world transition, i.e. pressing Play.
-
-The installer records what you actually gave it. Check `install.log`:
+**First, rule out the APK.** Ninecraft reads the game's own C++ objects at
+hard-coded byte offsets validated against one specific library, so a different
+build of the same version number could in principle render every menu and then
+fault. The installer records what you actually gave it — check `install.log`:
 
 ```text
 Game library: 9668996 bytes
 sha256: baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
 ```
 
-Those are the tested values. If yours differ, the installer will have said so,
-and that is the first thing to report. A different build is not *guaranteed* to
-fail — but it is the first thing to rule out.
+Those are the tested values, and both 0.8.1 APKs in the widely mirrored
+archive.org set match them exactly. So if your hash matches, **the APK is not
+your problem** and this is not the answer.
+
+**Then check memory.** In a world this port uses about 40 MB resident and
+**28 MB of swap**. It never creates swap itself — it relies on the console
+already having some, which an RG Nano does (a 128 MB partition). On a system
+with no swap, menus fit and a world does not, which looks exactly like "Play
+exits".
+
+```sh
+free -m
+cat /proc/swaps
+```
+
+An empty `/proc/swaps` on a 64 MB console is very likely the cause. Please
+include both outputs in a report — that is the single most useful thing you can
+send.
 
 ## Uninstall
 

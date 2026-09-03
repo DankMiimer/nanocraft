@@ -75,7 +75,11 @@ BAR_X, BAR_W, BAR_H = 118, 106, 11
 VAL_X, VAL_W, VAL_H = 140, 76, 18
 
 # Only these two divide the 240x240 panel cleanly; anything between shimmers.
+# 120x120 is the default -- about 11.9 fps against 7.8 -- and run.sh assumes the
+# same when resolution.txt is absent. Keep the two in step: a menu that shows
+# 240x240 while the game launches at 120x120 is worse than no row at all.
 SIZES = [240, 120]
+DEFAULT_SIZE = 120
 
 # Interface scale, passed to the launcher as NINECRAFT_GUI_SCALE.
 #
@@ -85,13 +89,16 @@ SIZES = [240, 120]
 # the environment and will go below 1.0 when told to.
 #
 #   auto  shrink only as far as the hotbar needs. Changes nothing at 240x240,
-#         where there is already room, and fixes 120x120. The default.
+#         where there is already room, and fixes 120x120.
 #   fit   size the interface to the hotbar in both directions, so it also grows
-#         into the spare room at 240x240. Larger, and still never clipped.
+#         into the spare room at 240x240. Larger there, identical to auto at
+#         120x120, and never clipped at either. The default, because it is the
+#         one setting that suits both screen sizes.
 #   1.0   stock Ninecraft: one interface pixel per rendered pixel. Crisp, and
 #         clipped at 120x120. Kept as the way back to the original look, and
 #         shown as STOCK because that is what it is.
 SCALES = ["auto", "fit", "1.0"]
+DEFAULT_SCALE = "fit"
 SCALE_STRIP = {"auto": "gsauto.raw", "fit": "gsfit.raw", "1.0": "gsstock.raw"}
 
 # The CPU ladder, 48 MHz per step from stock, as reported by `nano-clk --list`.
@@ -114,7 +121,8 @@ C_BAR_ED = rgb(140, 155, 185)
 
 
 def read_size():
-    """Current render width, defaulting to native."""
+    """Current render width, defaulting the way run.sh does when the file is
+    absent -- which is the state every fresh install is in."""
     try:
         with open(RESFILE) as f:
             w = int(f.read().split()[0])
@@ -122,7 +130,7 @@ def read_size():
             return w
     except Exception:
         pass
-    return 240
+    return DEFAULT_SIZE
 
 
 def write_size(w):
@@ -144,7 +152,7 @@ def read_guiscale():
             return v
     except Exception:
         pass
-    return SCALES[0]
+    return DEFAULT_SCALE
 
 
 def write_guiscale(v):

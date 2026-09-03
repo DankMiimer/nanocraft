@@ -77,8 +77,9 @@ export NINECRAFT_HEIGHT="$H"
 # window and floors at 1.0; that floor leaves a 120x120 screen 62 pixels too
 # narrow for the 182-pixel hotbar, which is why 120x120 used to clip. This
 # launcher takes the scale from here and will go below the floor when asked.
-# "auto" only shrinks when it must, so 240x240 is untouched.
-export NINECRAFT_GUI_SCALE="${NINECRAFT_GUI_SCALE:-auto}"
+# "fit" sizes the interface to the hotbar in whichever direction it has to go,
+# so it fits at 120x120 and fills the spare room at 240x240.
+export NINECRAFT_GUI_SCALE="${NINECRAFT_GUI_SCALE:-fit}"
 
 echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
 

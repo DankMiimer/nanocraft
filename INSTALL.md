@@ -69,15 +69,17 @@ off. Every launch after that goes straight to the game.
 
 ## Optional settings
 
-**Resolution.** Write `120 120` into `/mnt/FunKey/nanocraft/resolution.txt` for
-roughly 12 fps instead of 8, at the cost of a soft 2x-upscaled picture. Delete
-the file to go back to native 240x240. Those are the only two sizes that divide
-the panel cleanly. The quick menu's VIDEO page does the same thing.
+**Resolution.** The default is 120x120, for roughly 12 fps instead of 8, at the
+cost of a soft 2x-upscaled picture. Write `240 240` into
+`/mnt/FunKey/nanocraft/resolution.txt` for the native, sharper image. Those are
+the only two sizes that divide the panel cleanly. The quick menu's VIDEO page
+does the same thing.
 
-**GUI scale.** `/mnt/FunKey/nanocraft/guiscale.txt` holds `auto` (the default:
-shrink the interface only as far as the hotbar needs, so 240x240 is untouched
-and 120x120 fits), `fit` (size the interface to the hotbar either way, which is
-larger at 240x240) or a number. Also on the quick menu's VIDEO page.
+**GUI scale.** `/mnt/FunKey/nanocraft/guiscale.txt` holds `fit` (the default:
+size the interface to the hotbar, which shrinks it to fit at 120x120 and grows
+it into the spare room at 240x240), `auto` (shrink only when it must, so
+240x240 is left as older versions drew it) or a number. Also on the quick menu's
+VIDEO page.
 
 **Controls.** Drop your own `minecraft.key` into `/mnt/FunKey/nanocraft/` and it
 overrides the packaged one. Verify any edit with `keymap save`, because

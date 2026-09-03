@@ -42,37 +42,41 @@ pixel is drawn by a software rasterizer.
 
 | Internal resolution | Frame rate | Picture |
 | --- | ---: | --- |
-| **240x240 — recommended** | **7.8 fps** | native, 1:1, sharpest |
-| 120x120 | 11.9 fps | soft 2x upscale, interface intact |
+| **120x120 — the default** | **11.9 fps** | soft 2x upscale, whole interface |
+| 240x240 | 7.8 fps | native, 1:1, sharpest |
 
 **Both figures are in-world**, measured by replaying a recorded real play session
 against the same restored world — not by standing still on a title screen. A
 title screen reads 11.6 fps at 240x240 and means nothing.
 
-**Why 240x240 despite being slower.** Quartering the pixel count buys only
-+52%, because about **70 ms of every frame is fixed** — roughly 46 ms of
-Minecraft's own logic and 23 ms of rasterizer overhead, neither of which cares
-about resolution:
+**Why 120x120 is the default.** Quartering the pixel count buys +52%, not the
+4x a fill-rate-bound workload would give, because about **70 ms of every frame
+is fixed** — roughly 46 ms of Minecraft's own logic and 23 ms of rasterizer
+overhead, neither of which cares about resolution:
 
 ```text
 frame_ms  ~=  70.6  +  0.00094 x pixels
 ```
 
-So resolution alone tops out near 14 fps no matter how far you drop it, while
-120x120 costs you a soft picture for four frames. 240x240 and 120x120 are the
-only sizes that divide the panel cleanly; anything between them shimmers.
+So resolution alone tops out near 14 fps no matter how far you drop it. +52% is
+still the largest single gain available, though, and until v1.0.5 it came with a
+hotbar cut off at both edges, which is why 240x240 was recommended instead. That
+is fixed, so the trade is now four frames against a softer picture, and four
+frames matter a great deal at eight.
 
-Switch between them in the quick menu (**L + SELECT → VIDEO → SCREEN**), then
-pick RESTART to apply it — the game reads the size once at startup, so it cannot
-change in a running process. Editing
-`/mnt/FunKey/nanocraft/resolution.txt` does the same thing.
+**Prefer the sharper image?** 240x240 is one row away in the quick menu
+(**L + SELECT → VIDEO → SCREEN**), then RESTART to apply it — the game reads the
+size once at startup, so it cannot change in a running process. Editing
+`/mnt/FunKey/nanocraft/resolution.txt` does the same thing. Those two are the
+only sizes that divide the panel cleanly; anything between them shimmers.
 
 ### GUI scale
 
-120x120 used to cut the ends off the hotbar. That was never a Minecraft setting
-going wrong: Ninecraft lays the interface out at a scale it computes from the
-window and **floors that scale at 1.0**, and Minecraft's hotbar is 182 interface
-pixels wide, so a 120-pixel-wide screen was simply 62 pixels too narrow for it.
+120x120 used to cut the ends off the hotbar, which is the only reason it was not
+the default. That was never a Minecraft setting going wrong: Ninecraft lays the
+interface out at a scale it computes from the window and **floors that scale at
+1.0**, and Minecraft's hotbar is 182 interface pixels wide, so a 120-pixel-wide
+screen was simply 62 pixels too narrow for it.
 Nothing in the game's own options could reach it — `gfx_pixeldensity`, despite
 the name, is the touch d-pad's size in pixels per millimetre and is recomputed
 from the window on every launch.
@@ -82,8 +86,8 @@ floor. **VIDEO → GUI SCALE**:
 
 | | What it does |
 | --- | --- |
-| **AUTO** (default) | Shrink only as far as the hotbar needs. Nothing changes at 240x240, which already has room; 120x120 gains a complete interface. |
-| **FIT** | Size the interface to the hotbar in either direction, so it also *grows* into the spare room at 240x240. Bigger, still never clipped. |
+| **FIT** (default) | Size the interface to the hotbar in either direction. At 120x120 that shrinks it to fit; at 240x240 it *grows* into the spare room. Never clipped at either, so it is the one setting that suits both screen sizes. |
+| **AUTO** | Shrink only as far as the hotbar needs, and never grow. Identical to FIT at 120x120; leaves 240x240 exactly as older versions drew it. |
 | **STOCK** | One interface pixel per rendered pixel, exactly as Ninecraft ships. Crispest, and clips at 120x120. |
 
 Like SCREEN, it is read at startup, so it takes a RESTART.

@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.5
+
+**120x120 is now the default, with GUI SCALE on FIT.**
+
+v1.0.4 removed the only real objection to the faster mode — a hotbar with both
+ends cut off — so there is no longer a reason to ship the slower one. 11.9 fps
+against 7.8 is +52%, the largest single gain available on this console, and at
+eight frames a second that is worth a softer picture. FIT is the default scale
+because it is the one that suits both sizes: at 120x120 it is identical to AUTO,
+and at 240x240 it fills the spare room instead of leaving it.
+
+**This changes what you get on upgrade** if you never set a resolution: the next
+launch comes up at 120x120. Anything already in `resolution.txt` or
+`guiscale.txt` is still honoured, and **L + SELECT → VIDEO → SCREEN** puts
+240x240 back in two presses and a RESTART.
+
 ## v1.0.4
 
 **120x120 no longer clips the hotbar.** It was the one thing keeping the faster

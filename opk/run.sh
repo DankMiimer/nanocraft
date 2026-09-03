@@ -128,21 +128,26 @@ restore_clock() {
 # cannot be changed in a running process.
 GAME=
 start_game() {
-  # 240x240 is native and the default. 120x120 buys about 4 fps. Only those two
-  # divide the panel cleanly; anything between them shimmers.
-  W=240; H=240
+  # 120x120 is the default: it renders in a quarter of the pixels for about
+  # 11.9 fps against 240x240's 7.8, and the reason it was not the default before
+  # -- a hotbar with both ends cut off -- is fixed. The cost is now only a soft
+  # 2x upscale. 240x240 is native and sharper, and is one row away in the quick
+  # menu. Those are the only two sizes that divide the panel cleanly; anything
+  # between them shimmers.
+  W=120; H=120
   [ -f "$DATA/resolution.txt" ] && read W H < "$DATA/resolution.txt" 2>/dev/null
-  case "$W" in ''|*[!0-9]*) W=240; H=240 ;; esac
-  case "$H" in ''|*[!0-9]*) W=240; H=240 ;; esac
+  case "$W" in ''|*[!0-9]*) W=120; H=120 ;; esac
+  case "$H" in ''|*[!0-9]*) W=120; H=120 ;; esac
 
-  # Interface scale, from the quick menu's video page. 120x120 used to clip the
-  # hotbar because Ninecraft floors its GUI scale at 1.0 and a 182-pixel hotbar
-  # does not fit in 120; the patched launcher will go below that floor. "auto"
-  # shrinks only when it must, so it changes nothing at 240x240. Anything the
-  # launcher cannot parse is ignored there, but keep the obvious junk out.
-  GS=auto
+  # Interface scale, from the quick menu's video page. Ninecraft floors its GUI
+  # scale at 1.0, and a 182-pixel hotbar does not fit in 120; the patched
+  # launcher will go below that floor. "fit" sizes the interface to the hotbar
+  # whichever way it has to go, so it is the setting that suits both screen
+  # sizes rather than only the default one. Anything the launcher cannot parse
+  # it ignores, but keep the obvious junk out.
+  GS=fit
   [ -f "$DATA/guiscale.txt" ] && read GS < "$DATA/guiscale.txt" 2>/dev/null
-  case "$GS" in ''|*[!0-9a-z.]*) GS=auto ;; esac
+  case "$GS" in ''|*[!0-9a-z.]*) GS=fit ;; esac
   echo "[opk] starting at ${W}x${H} gui=$GS" >> "$LOG"
 
   # MIYOO_NO_GRAB=1 is what makes the quick menu possible. Ninecraft would

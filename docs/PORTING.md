@@ -85,7 +85,7 @@ below) — this is the honest number:
 | **240x240 (native)** | 48.7 | 77.6 | 1.1 | 127.5 ms | **7.8** |
 | 120x120 (2x upscale) | ~44 | ~37 | 1.1 | 83.9 ms | 11.9 |
 
-### Why 240x240 is the default despite being slower
+### Why 120x120 is the default, and why 240x240 was until v1.0.5
 
 Quartering the pixel count buys **+52%**, not the 4x a fill-rate-bound workload
 would give, because **`app+submit` is flat at ~45-49 ms** — that is Minecraft's
@@ -127,9 +127,10 @@ in `Screen::setSize(width / scale, ...)`. At 240x240 the fit scale is 1.304, so
 was. The MM+ port documented the same failure mode at 160x120, where Settings
 and Store fell off entirely; the same lever would fix it there.
 
-So the trade is now just a soft 2x-upscaled picture for 4 fps. **Play at
-240x240** for the sharper image; 120x120 is a real option rather than a
-compromised one.
+So the trade is now just a soft 2x-upscaled picture for 4 fps, and at 8 fps four
+frames is worth more than sharpness. **120x120 became the default in v1.0.5**;
+240x240 stays one row away in the quick menu for anyone who would rather have
+the native image.
 
 The present path is not worth optimising: the RGB565 blit is **1.1 ms**, under
 1% of a frame. `fb_nano.h`'s prediction that it would be cheap is confirmed, and

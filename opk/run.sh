@@ -132,16 +132,22 @@ GAME=$!
 # is alive, so it is grabbed once the game is up and the status refreshed as it
 # runs, leaving the last sample before a crash.
 if [ "${NANOCRAFT_DIAG:-0}" = 1 ]; then
+  # REFRESH the map, never keep the first one. Libraries are added as the game
+  # starts - the game library itself, Mesa, the presenter - and a map captured
+  # in the first seconds contains only the loader and ninecraft, so any later
+  # fault resolves to nothing. Since mappings are only added, the most recent
+  # sample is always the most complete.
   ( n=0
-    while [ $n -lt 120 ] && kill -0 "$GAME" 2>/dev/null; do
+    while [ $n -lt 3600 ] && kill -0 "$GAME" 2>/dev/null; do
       P=$(pgrep -f '[l]d-linux-armhf' 2>/dev/null | head -1)
       if [ -n "$P" ] && [ -r "/proc/$P/maps" ]; then
-        [ -f "$DATA/diag-maps.txt" ] || cat "/proc/$P/maps" > "$DATA/diag-maps.txt" 2>/dev/null
+        cat "/proc/$P/maps"   > "$DATA/diag-maps.txt.new" 2>/dev/null &&
+          mv -f "$DATA/diag-maps.txt.new" "$DATA/diag-maps.txt" 2>/dev/null
         cat "/proc/$P/status" > "$DATA/diag-status.txt" 2>/dev/null
         echo "$P" > "$DATA/diag-pid.txt" 2>/dev/null
       fi
-      sleep 5
-      n=$(( n + 5 ))
+      sleep 3
+      n=$(( n + 3 ))
     done ) >/dev/null 2>&1 &
 fi
 

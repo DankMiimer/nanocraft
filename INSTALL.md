@@ -163,7 +163,14 @@ are not asked the same thing five times.
    then **starts the game normally**. Play until it crashes, or quit with a long
    press on MENU if it does not.
 4. It finishes by itself and shows **REPORT SAVED** on screen.
-5. Send `/mnt/FunKey/nanocraft/nanocraft-report.txt`.
+5. **Power off, put the SD card in a PC**, and take `nanocraft-report.txt` from
+   the **root** of the large data partition.
+
+These consoles have no networking, so the SD card is the only way the file
+travels. That is why the report is written to the root of the card rather than
+buried next to the game — it is the first thing you see when the card mounts.
+(A second copy is left at `/mnt/FunKey/nanocraft/nanocraft-report.txt` for
+anyone who does have a shell.)
 
 **It writes a file and sends nothing.** There is no network code in it — the
 packaging script refuses to build it if any appears. The report contains

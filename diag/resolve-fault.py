@@ -85,6 +85,16 @@ def main():
         print("  No usable memory map was captured, so the address below")
         print("  cannot be attributed to a library.")
 
+    # libminecraftpe.so does NOT appear as a file in the map: Ninecraft loads it
+    # with a bundled Android linker that maps it by hand, so the game's code
+    # lands in ANONYMOUS executable memory. Without accounting for that, a fault
+    # in the game - the single most interesting outcome - would report only
+    # "anonymous". The game's text segment is by far the largest anonymous
+    # executable region, so it is identifiable by size.
+    anon_exec = [(lo, hi) for lo, hi, perms, off, name in maps
+                 if perms.startswith("r-x") and not name]
+    biggest = max((hi - lo, lo, hi) for lo, hi in anon_exec) if anon_exec else None
+
     for label, m in (("PC", pc), ("LR", lr)):
         if not m:
             continue
@@ -92,19 +102,40 @@ def main():
         hit = resolve(addr, maps) if maps else None
         if hit:
             base, perms, fileoff, name = hit
-            print("  %s  0x%08x  ->  %s+0x%x  [%s]"
-                  % (label, addr, name or "anonymous",
-                     addr - base + fileoff, perms))
+            if name:
+                print("  %s  0x%08x  ->  %s+0x%x  [%s]"
+                      % (label, addr, name, addr - base + fileoff, perms))
+            else:
+                size = 0
+                for lo, hi in anon_exec:
+                    if lo <= addr < hi:
+                        size = hi - lo
+                        break
+                guess = ""
+                if biggest and biggest[1] <= addr < biggest[2]:
+                    guess = "  <-- very likely libminecraftpe.so (the game)"
+                elif perms.startswith("r-x"):
+                    guess = "  (anonymous executable memory)"
+                print("  %s  0x%08x  ->  anonymous+0x%x  [%s, %d kB region]%s"
+                      % (label, addr, addr - base, perms, size // 1024, guess))
         else:
             note = ""
             if addr < 0x1000:
                 note = "   (a null-pointer dereference)"
             print("  %s  0x%08x  ->  not in any mapped region%s" % (label, addr, note))
 
+    if biggest:
+        print()
+        print("  Largest anonymous executable region: 0x%08x-0x%08x (%d kB)"
+              % (biggest[1], biggest[2], biggest[0] // 1024))
+        print("  That is where the game's own code lives - it has no filename")
+        print("  because Ninecraft's Android linker maps it by hand.")
+
     print()
-    print("  How to read this: a fault inside libminecraftpe.so is the game's")
-    print("  own code; inside swrast_dri.so or libGL is the software renderer;")
-    print("  inside libEGL.so.1 is this port's framebuffer presenter.")
+    print("  How to read this: a fault in the largest anonymous executable")
+    print("  region is the game's own code; inside swrast_dri.so or libGL is the")
+    print("  software renderer; inside libEGL.so.1 is this port's presenter;")
+    print("  inside libc/libpthread is usually the caller's bug, not libc's.")
 
 
 if __name__ == "__main__":

@@ -171,9 +171,11 @@ fault reporting first and captures the game's memory map while it lives, so any
 crash address can be **resolved to the library that faulted and the offset
 inside it**.
 
-It writes `/mnt/FunKey/nanocraft/nanocraft-report.txt` and **sends nothing**;
-the packaging script refuses to build it if any network code appears. Full
-instructions in [INSTALL.md](INSTALL.md).
+It writes `nanocraft-report.txt` to the **root of the SD card** and **sends
+nothing** — the packaging script refuses to build it if any network code
+appears. These consoles have no networking, so the card is how the file
+travels, and the root is where you will actually find it. Full instructions in
+[INSTALL.md](INSTALL.md).
 
 ## Install
 

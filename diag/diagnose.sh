@@ -21,8 +21,20 @@ set -u
 
 APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 DATA=/mnt/FunKey/nanocraft
-REPORT=$DATA/nanocraft-report.txt
 RUNLOG=$DATA/run.log
+
+# WHERE THE REPORT GOES, AND WHY THERE.
+#
+# These consoles have no networking, so the only way this file reaches anyone is
+# the owner powering off, taking the SD card out and reading it on a PC. That
+# makes the location a usability decision, not a tidiness one: /mnt is the big
+# vfat data partition, which is exactly what appears as a drive when the card is
+# inserted. Writing to the ROOT of it means the file is the first thing they
+# see, instead of three folders down.
+#
+# A copy stays beside the game as well, for anyone reading over a shell.
+REPORT=/mnt/nanocraft-report.txt
+REPORT_COPY=$DATA/nanocraft-report.txt
 
 mkdir -p "$DATA" 2>/dev/null
 
@@ -38,7 +50,12 @@ say ""
 say "This file was produced on the owner's own console by the NanoCraft"
 say "diagnostic build. It contains hardware information and this port's own"
 say "state. It contains no personal files, no credentials and no game content."
-say "Nothing was transmitted anywhere - the file is yours to share or delete."
+say "Nothing was transmitted anywhere - these consoles have no networking, and"
+say "this build contains no network code regardless. The file is yours to share"
+say "or delete."
+say ""
+say "To retrieve it: power the console off, put the SD card in a PC, and take"
+say "nanocraft-report.txt from the root of the large data partition."
 
 sec "1. CONSOLE"
 run uname -a
@@ -157,7 +174,13 @@ tail -30 "$DATA/diag-dmesg.txt" >> "$REPORT" 2>&1
 say ""
 
 sec "END OF REPORT"
-say "Send: $REPORT"
+say "Power off, put the SD card in a PC, and send nanocraft-report.txt from the"
+say "root of the large data partition. A second copy is at $REPORT_COPY."
+
+# Keep a copy beside the game for anyone with shell access.
+mkdir -p "$DATA" 2>/dev/null
+cp -f "$REPORT" "$REPORT_COPY" 2>/dev/null
+sync 2>/dev/null
 
 # Leave the console as we found it.
 echo 0 > /proc/sys/kernel/print-fatal-signals 2>/dev/null

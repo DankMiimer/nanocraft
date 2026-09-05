@@ -78,12 +78,15 @@ if [ ! -f "$GAMEOPTS" ]; then
 fi
 
 # --- memory ------------------------------------------------------------------
-# Entering a world needs about 68 MB of anonymous memory (measured: 40 MB
-# resident plus 28 MB swapped) on a console with 56 MB of RAM. With the stock
-# 128 MB swap partition that is fine and this does nothing but log three
-# numbers. On a console with little or no swap the menus still fit and the game
-# dies the moment a world loads, which is a confusing way to fail.
-sh "$APP_DIR/ensure-swap.sh" "$DATA" >> "$LOG" 2>&1
+# A world needs about 65 MB of anonymous memory (measured: 28 MB resident plus
+# 37 MB swapped) on a console with 56 MB of RAM. ensure-memory.sh closes that
+# gap with compressed RAM instead of a swap file on the card, and refuses to
+# launch rather than quietly paging to flash - there is no fallback to the card,
+# by design. The measurements and the sizing live in that script.
+if ! sh "$APP_DIR/ensure-memory.sh" "$DATA" >> "$LOG" 2>&1; then
+  echo "[opk] could not arrange RAM-only swap - see $LOG" >> "$LOG"
+  exit 1
+fi
 
 # --- controls ----------------------------------------------------------------
 # The binary is the Miyoo Mini Plus build and reads /dev/input/event0 expecting
@@ -103,15 +106,21 @@ KEYFILE="$APP_DIR/minecraft.key"
 [ -x "$KEYMAP" ] && "$KEYMAP" load "$KEYFILE" && sleep 1
 
 # --- cleanup helpers ---------------------------------------------------------
-release_swap() {
-  [ -f "$DATA/.swap-loop" ] || return 0
-  _l=$(cat "$DATA/.swap-loop" 2>/dev/null)
-  [ -n "$_l" ] || return 0
-  swapoff "$_l" 2>/dev/null
-  losetup -d "$_l" 2>/dev/null
-  rm -f "$DATA/.swap-loop"
-  # The backing file stays: creating it is the slow part, and reusing it makes
-  # every later launch instant.
+release_memory() {
+  # The firmware's own swap goes back FIRST, so that swapping off zram has
+  # somewhere to put anything still held there. By this point the game has
+  # exited and that is a few hundred KB, but the ordering costs nothing.
+  if [ -s "$DATA/.disk-swap" ]; then
+    while read -r _d; do
+      [ -n "$_d" ] && swapon "$_d" 2>/dev/null
+    done < "$DATA/.disk-swap"
+    rm -f "$DATA/.disk-swap"
+  fi
+  grep -q '^/dev/zram0 ' /proc/swaps && swapoff /dev/zram0 2>/dev/null
+  [ -e /sys/block/zram0/reset ] && echo 1 > /sys/block/zram0/reset 2>/dev/null
+  # The modules stay loaded. They cost 97 KB of kernel memory and reloading
+  # them on every launch buys nothing.
+  return 0
 }
 
 # Always hand the console back at its stock clock. An overclock set from the
@@ -260,7 +269,7 @@ trap on_power USR1
 # game, because the game legitimately comes and goes across a restart.
 ( while kill -0 "$MAIN" 2>/dev/null; do sleep 5; done
   [ -x "$KEYMAP" ] && "$KEYMAP" default
-  release_swap
+  release_memory
   restore_clock ) >/dev/null 2>&1 &
 
 RC=0
@@ -284,7 +293,7 @@ while : ; do
 done
 
 [ -x "$KEYMAP" ] && "$KEYMAP" default
-release_swap
+release_memory
 restore_clock
 echo "[opk] exit rc=$RC" >> "$LOG"
 exit "$RC"

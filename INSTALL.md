@@ -133,29 +133,44 @@ Those are the tested values, and both 0.8.1 APKs in the widely mirrored
 archive.org set match them exactly. So if your hash matches, **the APK is not
 your problem** and this is not the answer.
 
-**Then check memory.** In a world this port uses about 40 MB resident and
-**28 MB of swap** — roughly 27 MB more than this hardware's RAM can supply on
-its own. Menus fit; a world does not.
+**Then check memory.** In a world this port uses about 28 MB resident and
+**37 MB swapped** — roughly 10 MB more anonymous memory than this hardware
+physically has. Menus fit; a world does not.
 
-Since v1.0.1 the launcher handles this itself. Every run logs its memory
-situation to `run.log`:
-
-```text
-[mem] RAM 55 MB total, 36 MB available; swap 127 MB
-[mem] swap is sufficient (>= 64 MB), nothing to do
-```
-
-If your console is short of swap you will instead see it provide some:
+The launcher handles this itself, and since v1.0.6 it does so **entirely in
+RAM**: it loads zram, a compressed block device, and lets the kernel keep
+evicted pages there under LZ4 instead of writing them to your card. Measured
+compression on this game is 2.7:1, so 40 MB of evicted pages cost about 14 MB.
+Every run logs what happened to `run.log`:
 
 ```text
-[mem] swap is short: 0 MB < 64 MB needed to load a world
-[mem] providing 128 MB of swap in /mnt/FunKey/nanocraft/nanocraft.swap
-[mem] swap enabled on /dev/loop1; total now 127 MB
+[mem] RAM 55 MB total, 41 MB available; swap 0 MB
+[mem] zram: 80 MB logical, lz4, 24 MB RAM ceiling
+[mem] disabled disk swap /dev/mmcblk0p3
+[mem] swap now 79 MB, RAM-backed only
 ```
 
-That file is created once and reused, and it is released when you quit. It costs
-128 MB of card space; delete it if you want the space back and the launcher will
-make it again if it is ever needed.
+Your SD card is switched **out** of the paging path for as long as the game is
+running, and put back when you quit. Nothing is written to it, and no swap file
+is created anywhere. If you are upgrading, the old 128 MB `nanocraft.swap` is
+deleted on first launch and you get the space back.
+
+If the modules will not load — a firmware update is the usual reason — the
+launcher says so and **refuses to start**:
+
+```text
+[mem] could not set up RAM-only swap on kernel 4.14.14-funkey.
+[mem] Entering a world needs about 65 MB of anonymous memory and this
+[mem] console has 56 MB of RAM, so NanoCraft will not start without
+[mem] them. Rebuilding them for your kernel is documented in
+[mem] modules/README.md; it needs no firmware change.
+```
+
+There is no fallback to the SD card, deliberately: paging to flash is the
+behaviour this release removed, and offering a way back into it would be
+shipping it. The modules are ordinary out-of-tree kernel modules and rebuilding
+them for a different kernel is documented in `opk/modules/README.md`. It needs
+no firmware change.
 
 **Please include those `[mem]` lines in any report** — they are the single most
 useful thing you can send.
@@ -200,8 +215,8 @@ between guessing and knowing.
 ## Uninstall
 
 Delete `/mnt/Native games/NanoCraft_funkey-s.opk`, its `.png`, and
-`/mnt/FunKey/nanocraft/` (which includes `nanocraft.swap` if the launcher ever
-had to create one).
+`/mnt/FunKey/nanocraft/`. Nothing is left anywhere else: the zram modules are
+loaded from the package at runtime and a reboot unloads them.
 
 **Your worlds live in `/mnt/FunKey/nanocraft/home/`** — copy that somewhere first
 if you want to keep them.

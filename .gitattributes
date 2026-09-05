@@ -14,7 +14,13 @@ Dockerfile* text eol=lf
 .dockerignore text eol=lf
 *.ps1   text eol=crlf
 
+# The kernel configuration the zram modules are built from. A CRLF copy is not
+# a valid input to `make olddefconfig`, so it has to survive a Windows clone
+# intact for the modules to be rebuildable at all.
+*.config text eol=lf
+
 # Binary assets
 *.png   binary
 *.raw   binary
 *.ttf   binary
+*.ko    binary

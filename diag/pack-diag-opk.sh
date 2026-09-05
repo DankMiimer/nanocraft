@@ -21,10 +21,11 @@ OUT=$HOME/$NAME.opk
 
 # The game half must be byte-identical to the shipping package, or the
 # diagnostic would be measuring something the tester does not actually run.
-GAME_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-swap.sh"
+GAME_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh"
 GAME_DATA="minecraft.key menubg.raw videobg.raw res240.raw res120.raw
            gsauto.raw gsfit.raw gsstock.raw
            fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw
+           capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw
            cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
 GAME_PY="quickmenu.py"
 GAME_BIN="nano-clk"
@@ -32,9 +33,25 @@ DIAG_SCRIPTS="diagnose.sh"
 DIAG_PY="resolve-fault.py memprobe.py"
 DIAG_DATA="diagbg.raw"
 
+# The game half sits beside this script in the working tree and one directory
+# over in the published one. Find it rather than assuming, so that "byte
+# identical to the shipping package" holds in both.
+GAME_SRC="$SRC"
+[ -f "$GAME_SRC/run.sh" ] || GAME_SRC="$SRC/../opk"
+
 rm -rf "$STAGE"; mkdir -p "$STAGE"
-for f in $GAME_SCRIPTS $GAME_PY $GAME_DATA $GAME_BIN $DIAG_SCRIPTS $DIAG_PY $DIAG_DATA; do
+for f in $GAME_SCRIPTS $GAME_PY $GAME_DATA $GAME_BIN; do
+  cp "$GAME_SRC/$f" "$STAGE/"
+done
+for f in $DIAG_SCRIPTS $DIAG_PY $DIAG_DATA; do
   cp "$SRC/$f" "$STAGE/"
+done
+
+# ensure-memory.sh refuses to launch without these, so the diagnostic build
+# needs them for exactly the same reason the normal one does.
+mkdir -p "$STAGE/modules"
+for f in "$GAME_SRC"/modules/*; do
+  cp "$f" "$STAGE/modules/"
 done
 
 for f in menubg.raw videobg.raw diagbg.raw; do

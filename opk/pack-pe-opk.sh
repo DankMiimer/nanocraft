@@ -37,18 +37,26 @@ NAME=NanoCraft_funkey-s
 STAGE=$HOME/.nanocraft-opk-stage
 OUT=$HOME/$NAME.opk
 
-PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-swap.sh"
+PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh"
 PAYLOAD_PY="quickmenu.py"
 PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
               nanocraft.png nanocraft.funkey-s.desktop
               res240.raw res120.raw
               gsauto.raw gsfit.raw gsstock.raw
               fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw
+              capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw
               cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
 # nano-clk is a static ARM binary, not a script: it writes the CPU PLL through
 # /dev/mem, which the quick menu's CPU row drives. Static so it depends on
 # nothing - this console is musl and the toolchain is glibc.
 PAYLOAD_BIN="nano-clk"
+
+# Loaded at launch by ensure-memory.sh, in this order: zram stores through
+# zsmalloc and compresses through the crypto lz4 shim above the two algorithm
+# modules. VERMAGIC is the kernel identity string the module loader insists on
+# matching; see modules/README.md.
+PAYLOAD_MODULES="lz4_compress.ko lz4_decompress.ko lz4.ko zsmalloc.ko zram.ko"
+VERMAGIC="4.14.14-funkey"
 
 # The rendered menu is a build product and is not committed, so a fresh clone
 # will not have it. Say so plainly instead of failing on a bare `cp`.
@@ -71,11 +79,37 @@ for f in $PAYLOAD_SCRIPTS $PAYLOAD_PY $PAYLOAD_DATA $PAYLOAD_BIN; do
   cp "$SRC/$f" "$STAGE/"
 done
 
+# The zram modules. 97 KB, and the difference between a world loading in RAM and
+# a world loading off the SD card. kernel.config and README.md travel with them
+# because they are GPLv2 kernel code and the build has to stay reproducible.
+mkdir -p "$STAGE/modules"
+for f in $PAYLOAD_MODULES kernel.config README.md; do
+  if [ ! -f "$SRC/modules/$f" ]; then
+    echo "ERROR: modules/$f is missing."
+    echo "       See modules/README.md for how these are built."
+    exit 1
+  fi
+  cp "$SRC/modules/$f" "$STAGE/modules/"
+done
+
+# A module built for a different kernel does not misbehave, it simply refuses to
+# load - and it would do so on the console, at launch, in front of the user.
+# Catch it here instead. The string is what the loader itself compares.
+for f in $PAYLOAD_MODULES; do
+  if ! grep -qa "vermagic=$VERMAGIC" "$STAGE/modules/$f"; then
+    echo "ERROR: $f is not built for \"$VERMAGIC\"."
+    echo "       Rebuild it against DrUm78's RG Nano kernel and re-run the"
+    echo "       export audit; see modules/README.md."
+    exit 1
+  fi
+done
+
 # Every value strip the quick menu can blit must be present and whole. A missing
 # one would leave the CPU or screen row blank at exactly the moment someone is
 # trying to read what it is set to.
 for f in res240.raw res120.raw gsauto.raw gsfit.raw gsstock.raw \
          fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw \
+         capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw \
          cpu1008.raw cpu1056.raw cpu1104.raw \
          cpu1152.raw cpu1200.raw cpu1248.raw; do
   if [ "$(wc -c < "$STAGE/$f")" -ne 2736 ]; then

@@ -341,6 +341,28 @@ The build recipes ship in [`build/`](build/) — the Dockerfiles and the Ninecra
 patch — so what you are running can be reproduced. A verified step-by-step build
 guide is not written yet.
 
+## How much of this was written by AI
+
+Most of it, and you should know that before you run it on your own hardware.
+
+NanoCraft was built with AI coding assistants — Claude and ChatGPT — working
+from my direction. That covers the launcher scripts, the framebuffer presenter,
+the quick menu, the packaging, the zram work, and most of the documentation in
+this repository including this README. The write-ups in `docs/` started life as
+notes one agent left for the next, which is why they read the way they do.
+
+What it does not cover is the hardware. **Every performance and memory figure
+here was measured on a physical RG Nano**, not estimated and not produced by a
+model, and every feature was tried on the console before it was described as
+working. The frame rates, the 2.7:1 compression ratio, the memory floor during
+world entry — those came off the device. Where something is unmeasured or
+untested, the text says so rather than rounding it up into a claim.
+
+I chose the approach, ran the console, decided what shipped, and the mistakes in
+it are mine. I am saying this plainly because "an AI wrote it" is worth knowing
+when you are deciding whether to trust software with your SD card, and finding
+it out later is worse than being told.
+
 ## Legal
 
 NanoCraft distributes launcher scripts, a framebuffer presenter, a quick menu and

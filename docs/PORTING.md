@@ -61,9 +61,12 @@ project look impossible.
 
 **2. The RAM wall is not where it was expected.** DELTAS §8 calls memory "the
 delta that decides the project" and `tools/nano-swap.sh` exists to add a
-loopback swap file. Pocket Edition needs none of it: in-world RSS is **40 MB
-with 28 MB swapped**, against the 128 MB stock swap partition. The 512 MB
-`swap.img` left over from the Bedrock work is unused.
+loopback swap file. Pocket Edition needs none of it: in-world RSS is **28 MB
+with 37 MB swapped**, and since v1.0.6 none of that swap is on disk. The
+launcher loads zram and the pages stay in RAM at 2.7:1, costing about 14 MB to
+hold 40 MB. World entry bottoms out at 3.9 MB of MemAvailable and recovers, so
+the margin is real but thin. The 512 MB `swap.img` left over from the Bedrock
+work is unused, and so now is the stock 128 MB swap partition.
 
 ## Measured
 

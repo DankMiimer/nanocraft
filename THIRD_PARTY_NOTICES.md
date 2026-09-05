@@ -107,6 +107,32 @@ On a Debian 10 system, `apt-get source <package>` retrieves it. The snapshot URL
 is pinned in the Dockerfiles in `build/`, so the exact sources used are
 recoverable rather than approximate.
 
+## Linux kernel modules (GPL-2.0-only) — unmodified, custom configuration
+
+`opk/modules/` contains five loadable kernel modules that give the console zram,
+a compressed in-RAM block device. They exist so that entering a world does not
+require paging to the SD card. The launcher loads them at startup and a reboot
+unloads them; the console's own kernel and root filesystem are never modified.
+
+| | |
+| --- | --- |
+| Upstream | https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-4.14.14.tar.xz |
+| Licence | **GPL-2.0-only** |
+| Version | 4.14.14, **unmodified** — no patches of any kind |
+
+`lz4_compress.ko`, `lz4_decompress.ko`, `lz4.ko`, `zsmalloc.ko`, `zram.ko`.
+
+**No source changes were made.** The only thing that differs from a stock
+upstream build is the kernel configuration, which is distributed alongside the
+binaries as `opk/modules/kernel.config`, together with the exact build commands,
+in `opk/modules/README.md`. That configuration matches DrUm78's RG Nano kernel
+(uniprocessor, no preemption, no MODVERSIONS) because the module loader will
+otherwise refuse them.
+
+Complete corresponding source is the upstream tarball above; its `sha256` is
+published by kernel.org. Applying `kernel.config` to it reproduces these
+binaries. The kernel's own licence text is in the tarball as `COPYING`.
+
 ## Written for this project
 
 `src/fb_nano.h`, `src/fbegl_nano.c` (the framebuffer EGL presenter),

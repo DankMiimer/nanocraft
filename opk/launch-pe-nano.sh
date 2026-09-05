@@ -94,5 +94,17 @@ export FBEGL_FPS_CAP="${FBEGL_FPS_CAP:-0}"
 
 echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE fov=$NINECRAFT_FOV cap=$FBEGL_FPS_CAP gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
 
+# The console's power/menu button is answered by FunKey-OS with SIGUSR1, and it
+# arrives at the whole foreground process group rather than at a single pid. The
+# game has no handler for it, so the default action applied and it was killed -
+# the "menus work, then Play exits and the picture stays" report. Nothing was
+# crashing and nothing was short of memory.
+#
+# A disposition of "ignore" survives exec, by POSIX, so setting it here makes the
+# game immune before it starts. run.sh keeps its own handler and still opens the
+# menu; only the game stops dying of it. setsid would do as well and is not on
+# the factory firmware.
+trap '' USR1
+
 exec "$LOADER" --library-path "$LP" \
   "$D/ninecraft" --game "$GAME" --home "$D/home"

@@ -148,91 +148,94 @@ regardless. If the console locks up, power-cycle it and pick a lower step.
 - About **300 MB free** on the card.
 - **Your own Pocket Edition 0.8.1 APK**, 32-bit `armeabi-v7a`.
 
-## FunKey S: menus work, entering a world does not (yet)
+## Play used to crash on every console but mine. Here is why
 
-I only own an RG Nano, but a **FunKey S** owner on the latest DrUm78 build has
-tried it, and the result is genuinely useful:
+A **FunKey S** owner reported this against v1.0.0:
 
 > main menu works, options menu works, **Play crashes to desktop**
 
-So the hard parts port cleanly. Their log shows the framebuffer at 240x240, the
-RGB565 presenter running, llvmpipe rendering and the buttons arriving correctly
-— then `rc=139`, which is a **segfault**, at the moment Play is pressed.
+It was reproduced on a factory RG Nano and fixed in v1.0.7. The cause turned out
+to have nothing to do with memory, graphics or the game files:
 
-### Ruled out: the APK
+**Pressing Play opens the world list, and 0.8.1 answers that by asking RakNet to
+broadcast for LAN games. On a console with no network interface at all, that
+faults.** The crash is a null dereference inside
+`RakNet::RakPeer::Ping(char const*, unsigned short, bool, unsigned int)`, about
+eight seconds after the button, and the console is left showing the last frame
+it drew — which reads as a freeze, because nothing repaints afterwards.
 
-My first guess was that they had a different build of 0.8.1, because Ninecraft
-reads the game's C++ objects at hard-coded byte offsets that were validated
+It never happened here because **this console has a WiFi dongle**, added for an
+unrelated project. That single difference hid the bug through seven releases:
+every console without a network — a stock RG Nano, a FunKey S — hit it every
+time, and the one it was developed on never did.
+
+The fix is three lines in the launcher: bring up loopback before starting the
+game. `lo` exists on every kernel, costs nothing, and gives the socket layer
+something real to answer with. Nothing else was needed.
+
+### How it was found, since the false trails are instructive
+
+Four explanations were built and discarded first — memory pressure, a SIGUSR1
+kill, a thread deadlock, and world generation. Each was wrong the same way:
+inferred from instrumentation that had not been verified.
+
+The specific trap was the exit code. `run.sh` reported `status=138` on every
+run, which is SIGUSR1 — but that number came from the launcher's own `wait`
+being interrupted by the power button, not from the game. The real status was
+never being recorded. Capturing it from outside the launcher's signal handling
+gave `139` on the first try, the kernel's fatal-signal dump gave the faulting
+address, and the memory map resolved it to a symbol immediately.
+
+The lesson worth keeping: **`139` is a segfault and `138` was an artifact.**
+Since v1.0.7 the log says `game ended on its own, status=N` or `game closed from
+the menu`, so the two can never be confused again.
+
+### Ruled out along the way: the APK
+
+An early guess was that the reporter had a different build of 0.8.1, because
+Ninecraft reads the game's C++ objects at hard-coded byte offsets validated
 against one specific library. **That guess was wrong.** Both 0.8.1 APKs from the
-archive.org set contain a `libminecraftpe.so` that is **byte-identical** to the
-one this port was tested against:
+archive.org set contain a `libminecraftpe.so` byte-identical to the tested one:
 
 ```text
 libminecraftpe.so   9,668,996 bytes
 sha256              baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
 ```
 
-Same game, same file, different result. So the difference is the console or its
-OS image, not the content.
-
-(The installer still records that size and sha256 into `install.log`, because
-ruling this out in one line is worth the second it costs.)
+The installer still records that size and sha256 into `install.log`, because
+ruling this out in one line is worth the second it costs.
 
 ### What is measured, and what shipped
 
-Measured on an RG Nano, which is the same hardware class:
+Measured in a world, on two different consoles:
 
-| | Resident | Held compressed | Total anonymous |
-| --- | ---: | ---: | ---: |
-| Title screen | 37 MB | 5 MB | 42 MB |
-| **In a world** | 28 MB | 37 MB | **65 MB** |
+| | development console | factory console |
+| --- | ---: | ---: |
+| Game resident | 28 MB | 42 MB |
+| Held compressed | 37 MB | 36 MB |
+| **Total anonymous** | **65 MB** | **65 MB** |
+| RAM the console has | 56 MB | 54 MB |
+| Free at the worst moment | 3.9 MB | 4.2 MB |
 
-The console has **56 MB of RAM**, of which roughly 41 MB is available to the
-game. So **entering a world needs about 10 MB more anonymous memory than this
-hardware physically has**, on any console of this class.
+**Entering a world needs about 10 MB more anonymous memory than this hardware
+physically has**, and since v1.0.6 that difference is found in RAM rather than
+on your card. The launcher loads zram and LZ4 holds those pages at a measured
+**2.7:1**, so roughly 36 MB of idle pages occupy about 13 MB. Nothing is written
+to the SD card at any point. Details in [docs/PORTING.md](docs/PORTING.md).
 
-Menus fit; a world does not. A console that cannot find that extra headroom
-therefore shows every menu perfectly and dies the moment terrain loads — which
-is exactly the reported symptom.
+That ~4 MB floor is the budget this port lives inside, and it is why you will
+feel occasional stalls: a page the game touches that lives in zram has to be
+decompressed on the same core that draws the frame.
 
-**Since v1.0.6 NanoCraft makes that headroom itself, in RAM.** It loads zram, a
-compressed block device the kernel can move idle pages into, and lets LZ4 do
-the rest: measured on this game the ratio is **2.7:1**, with around 1,500
-identical pages deduplicated outright, so 40 MB of idle pages occupy about
-14 MB. Nothing is written to your card at any point. Details in
-[docs/PORTING.md](docs/PORTING.md).
-
-**Honesty about what this does not prove.** I could not reproduce the tester's
-`rc=139` on my own hardware, and the memory arithmetic above being solid does
-not make it *their* bug. What v1.0.6 changes is that the headroom now exists on
-any console where the modules load, so if memory was the cause, it should be
-gone. Every launch logs what happened:
-
-```text
-[mem] RAM 55 MB total, 41 MB available
-[mem] zram: 80 MB logical, lz4, 24 MB RAM ceiling
-```
-
-so the next report will contain the answer whether or not anyone thinks to ask.
-
-**The one thing that may not travel is the modules.** The RG Nano's kernel has
-no zram, so NanoCraft ships its own — and a kernel module is built for one
-specific kernel and refuses to load on any other. Mine were built for, and
-tested on, **my** console. If yours is a different build they will not load, and
-NanoCraft will say so and refuse to start rather than run without the memory it
-needs. That is a worse outcome than v1.0.5 gave you, and it is the thing most
-worth reporting.
-
-Rebuilding them needs no firmware change and no special hardware — the
-configuration, the exact build commands and the audit step are all in
-[`opk/modules/README.md`](opk/modules/README.md). If they do not load on your
-console, please open an issue with the `[mem]` line and `uname -a`; that is
-enough for me to build a set that does.
-
-Everything else about a FunKey S looks compatible — same FunKey-OS, same
-`fkgpiod`, same 240x240 panel, same Allwinner V3s family, and this package is
-already named `.funkey-s.desktop` because that is the suffix the OS wants on
-both. Reports welcome either way.
+**The one thing that may not travel is the kernel modules.** The RG Nano's
+kernel has no zram, so NanoCraft ships its own — and a kernel module is built
+for one specific kernel. Two sets ship, for the factory image and for a
+uniprocessor custom build, and `opk/modules/kernels` lists which builds have
+actually been verified. On anything else NanoCraft says so and refuses to start
+rather than run without the memory it needs. Rebuilding for your kernel needs no
+firmware change and is documented in
+[`opk/modules/README.md`](opk/modules/README.md); please open an issue with the
+`[mem]` line and `uname -a` and a verified set can be built for you.
 
 ### If it fails for you, there is a diagnostic build
 

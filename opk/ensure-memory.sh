@@ -61,7 +61,7 @@ echo "[mem] RAM $(mb MemTotal) MB total, $(mb MemAvailable) MB available"
 # of builds somebody has actually verified; anything else is not loaded at all.
 KERNEL_IDENT="$(uname -r) $(uname -v)"
 
-kernel_known() {
+kernel_set() {
   [ -f "$MODDIR/kernels" ] || return 1
   CR=$(printf '\r')
   while IFS= read -r line; do
@@ -70,7 +70,13 @@ kernel_known() {
     # console, which is the worst way for this to fail.
     line=${line%"$CR"}
     case "$line" in ''|'#'*) continue ;; esac
-    [ "$line" = "$KERNEL_IDENT" ] && return 0
+    # "<identity>|<directory>". Split on the pipe rather than on whitespace:
+    # a single-digit build day puts a double space in the identity.
+    case "$line" in *'|'*) ;; *) continue ;; esac
+    if [ "${line%|*}" = "$KERNEL_IDENT" ]; then
+      echo "${line##*|}"
+      return 0
+    fi
   done < "$MODDIR/kernels"
   return 1
 }
@@ -81,17 +87,18 @@ kernel_known() {
 load_modules() {
   # Nothing to check if the kernel already provides zram: the whitelist governs
   # what gets loaded, not what is already there.
-  if ! grep -q '^zram ' /proc/modules && ! kernel_known; then
-    UNKNOWN_KERNEL=1
-    return 1
+  set_dir=
+  if ! grep -q '^zram ' /proc/modules; then
+    set_dir=$(kernel_set) || { UNKNOWN_KERNEL=1; return 1; }
+    echo "[mem] kernel matches the '$set_dir' module set"
   fi
   for m in lz4_compress lz4_decompress lz4 zsmalloc zram; do
     grep -q "^$m " /proc/modules && continue
-    if [ ! -f "$MODDIR/$m.ko" ]; then
-      echo "[mem] missing $MODDIR/$m.ko"
+    if [ ! -f "$MODDIR/$set_dir/$m.ko" ]; then
+      echo "[mem] missing $MODDIR/$set_dir/$m.ko"
       return 1
     fi
-    if ! insmod "$MODDIR/$m.ko" 2>&1; then
+    if ! insmod "$MODDIR/$set_dir/$m.ko" 2>&1; then
       # Almost always a kernel that these were not built for - a firmware
       # update, or a different console. Say which, because the fix differs.
       echo "[mem] insmod $m failed on kernel $(uname -r)"

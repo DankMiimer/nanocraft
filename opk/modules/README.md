@@ -12,13 +12,24 @@ written to the read-only rootfs and no firmware change is involved.
 | `zsmalloc.ko` | compressed page allocator |
 | `zram.ko` | the block device itself |
 
-97 KB in total.
+**There are two sets, because there are two kernels.** DrUm78's factory RG Nano
+image is built `CONFIG_SMP=y`; the console this port was developed on is a
+custom uniprocessor build. Their vermagic strings differ by exactly one word:
+
+```
+smp/   4.14.14-funkey SMP mod_unload ARMv7 p2v8     factory image
+up/    4.14.14-funkey mod_unload ARMv7 p2v8         the development console
+```
+
+A module from the wrong set is refused by the loader, so one set cannot serve
+both. `kernels` says which build gets which, and the launcher picks from it.
+About 100 KB per set.
 
 ## Source
 
-**Unmodified Linux 4.14.14**, from kernel.org. No patches. `kernel.config` in
-this directory is the exact configuration they were built with, and is the only
-thing that differs from a stock upstream build. They are GPLv2 like the kernel
+**Unmodified Linux 4.14.14**, from kernel.org. No patches. Each set's `kernel.config` is the exact
+configuration it was built with, and is the only thing that differs from a stock
+upstream build. They are GPLv2 like the kernel
 they come from; see `../../THIRD_PARTY_NOTICES.md`.
 
 To rebuild, with the FunKey SDK toolchain (`arm-linux-`):
@@ -52,8 +63,12 @@ than a clean refusal.
 
 So the launcher does not rely on vermagic alone. `kernels` in this directory
 lists the build identities — `uname -r` plus `uname -v` — that somebody has
-actually verified, and nothing is loaded into a kernel that is not on that list.
-Adding one is deliberate, not automatic.
+actually verified, each followed by `|` and the set it needs. Nothing is loaded
+into a kernel that is not on that list. Adding one is deliberate, not automatic.
+
+The directory comes after a pipe rather than after a space because the identity
+contains runs of spaces: a single-digit build day reads `Jun  5`, and splitting
+on whitespace would quietly stop matching it.
 
 Vermagic also says nothing about whether the symbols a module needs are
 actually exported. That was checked separately: `audit-modules.py` in the research notes recovers the running

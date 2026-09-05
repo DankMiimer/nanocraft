@@ -1,8 +1,11 @@
-# Kernels these modules are known to be correct for.
+# Kernels these modules are known to be correct for, and which set each one
+# needs. One entry per line:
 #
-# One build identity per line, exactly as the console reports it:
+#     <uname -r> <uname -v>|<directory>
 #
-#     uname -r + " " + uname -v
+# The directory comes last, after a pipe, because the identity contains runs of
+# spaces that a shell would collapse: a single-digit build day gives "Jun  5",
+# and splitting on whitespace would quietly stop matching it.
 #
 # WHY THIS FILE EXISTS. The module loader compares a "vermagic" string, and
 # vermagic carries only the kernel version, SMP, preemption, module-unload
@@ -25,4 +28,14 @@
 # Note this is deliberately not /proc/version verbatim: that line carries the
 # username and hostname of whoever built the kernel, which is nobody's business.
 
-4.14.14-funkey #1 Thu Jun 18 07:57:19 CEST 2026
+# Factory DrUm78 RG Nano, FunKey-OS 2.3.0 "Zen Zebu". Its kernel is SMP.
+#
+# The card image carries two rootfs slots whose kernels were built sixteen
+# minutes apart and are not the same build - slot 2 is over a megabyte larger.
+# Slot 2 is what a factory console actually boots, and it is the one listed
+# here. Slot 1 (03:01:26) passes the same export audit but nothing has been
+# seen running it, so it stays off the list until something is.
+4.14.14-funkey #1 SMP Sun Jan 18 03:17:24 CET 2026|smp
+
+# The console this port was developed on: a custom build, uniprocessor.
+4.14.14-funkey #1 Thu Jun 18 07:57:19 CEST 2026|up

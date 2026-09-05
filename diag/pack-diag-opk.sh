@@ -27,8 +27,8 @@ GAME_DATA="minecraft.key menubg.raw videobg.raw res240.raw res120.raw
            fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw
            capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw
            cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
-GAME_PY="quickmenu.py"
-GAME_BIN="nano-clk"
+GAME_PY=""
+GAME_BIN="nano-clk quickmenu"
 DIAG_SCRIPTS="diagnose.sh"
 DIAG_PY="resolve-fault.py memprobe.py"
 DIAG_DATA="diagbg.raw"
@@ -50,9 +50,7 @@ done
 # ensure-memory.sh refuses to launch without these, so the diagnostic build
 # needs them for exactly the same reason the normal one does.
 mkdir -p "$STAGE/modules"
-for f in "$GAME_SRC"/modules/*; do
-  cp "$f" "$STAGE/modules/"
-done
+cp -r "$GAME_SRC"/modules/. "$STAGE/modules/"
 
 for f in menubg.raw videobg.raw diagbg.raw; do
   if [ "$(wc -c < "$STAGE/$f")" -ne 115200 ]; then

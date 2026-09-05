@@ -38,7 +38,7 @@ STAGE=$HOME/.nanocraft-opk-stage
 OUT=$HOME/$NAME.opk
 
 PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh"
-PAYLOAD_PY="quickmenu.py"
+PAYLOAD_PY=""
 PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
               nanocraft.png nanocraft.funkey-s.desktop
               res240.raw res120.raw
@@ -49,14 +49,19 @@ PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
 # nano-clk is a static ARM binary, not a script: it writes the CPU PLL through
 # /dev/mem, which the quick menu's CPU row drives. Static so it depends on
 # nothing - this console is musl and the toolchain is glibc.
-PAYLOAD_BIN="nano-clk"
+PAYLOAD_BIN="nano-clk quickmenu"
 
 # Loaded at launch by ensure-memory.sh, in this order: zram stores through
 # zsmalloc and compresses through the crypto lz4 shim above the two algorithm
 # modules. VERMAGIC is the kernel identity string the module loader insists on
 # matching; see modules/README.md.
 PAYLOAD_MODULES="lz4_compress.ko lz4_decompress.ko lz4.ko zsmalloc.ko zram.ko"
-VERMAGIC="4.14.14-funkey"
+# One set per kernel flavour. The factory DrUm78 image is SMP; the console this
+# port was developed on is not, and their vermagic strings differ by that word,
+# so a single set cannot serve both. modules/kernels says which build gets which.
+PAYLOAD_MODULE_SETS="up smp"
+VERMAGIC_up="4.14.14-funkey mod_unload"
+VERMAGIC_smp="4.14.14-funkey SMP mod_unload"
 
 # The rendered menu is a build product and is not committed, so a fresh clone
 # will not have it. Say so plainly instead of failing on a bare `cp`.
@@ -83,7 +88,7 @@ done
 # a world loading off the SD card. kernel.config and README.md travel with them
 # because they are GPLv2 kernel code and the build has to stay reproducible.
 mkdir -p "$STAGE/modules"
-for f in $PAYLOAD_MODULES kernels kernel.config README.md; do
+for f in kernels README.md; do
   if [ ! -f "$SRC/modules/$f" ]; then
     echo "ERROR: modules/$f is missing."
     echo "       See modules/README.md for how these are built."
@@ -91,17 +96,42 @@ for f in $PAYLOAD_MODULES kernels kernel.config README.md; do
   fi
   cp "$SRC/modules/$f" "$STAGE/modules/"
 done
+for set in $PAYLOAD_MODULE_SETS; do
+  mkdir -p "$STAGE/modules/$set"
+  for f in $PAYLOAD_MODULES kernel.config; do
+    if [ ! -f "$SRC/modules/$set/$f" ]; then
+      echo "ERROR: modules/$set/$f is missing."
+      echo "       See modules/README.md for how these are built."
+      exit 1
+    fi
+    cp "$SRC/modules/$set/$f" "$STAGE/modules/$set/"
+  done
+done
+
+# Every kernel named in the whitelist must have the set it points at.
+while IFS= read -r line; do
+  case "$line" in ''|'#'*) continue ;; esac
+  case "$line" in *'|'*) ;; *) continue ;; esac
+  want=${line##*|}
+  if [ ! -d "$STAGE/modules/$want" ]; then
+    echo "ERROR: modules/kernels points at set \"$want\", which is not shipped."
+    exit 1
+  fi
+done < "$SRC/modules/kernels"
 
 # A module built for a different kernel does not misbehave, it simply refuses to
 # load - and it would do so on the console, at launch, in front of the user.
 # Catch it here instead. The string is what the loader itself compares.
-for f in $PAYLOAD_MODULES; do
-  if ! grep -qa "vermagic=$VERMAGIC" "$STAGE/modules/$f"; then
-    echo "ERROR: $f is not built for \"$VERMAGIC\"."
-    echo "       Rebuild it against DrUm78's RG Nano kernel and re-run the"
-    echo "       export audit; see modules/README.md."
-    exit 1
-  fi
+for set in $PAYLOAD_MODULE_SETS; do
+  eval "want=\$VERMAGIC_$set"
+  for f in $PAYLOAD_MODULES; do
+    if ! grep -qa "vermagic=$want" "$STAGE/modules/$set/$f"; then
+      echo "ERROR: modules/$set/$f is not built for \"$want\"."
+      echo "       Rebuild it against that kernel and re-run the export audit;"
+      echo "       see modules/README.md."
+      exit 1
+    fi
+  done
 done
 
 # Every value strip the quick menu can blit must be present and whole. A missing
@@ -119,15 +149,20 @@ for f in res240.raw res120.raw gsauto.raw gsfit.raw gsstock.raw \
   fi
 done
 
-# nano-clk writes CPU clock registers, so confirm it is the right architecture
-# rather than discovering on the console that it will not execute.
-case "$(file -b "$STAGE/nano-clk" 2>/dev/null)" in
-  *"ARM"*"statically linked"*) : ;;
-  *) echo "ERROR: nano-clk is not a static ARM binary:"
-     file -b "$STAGE/nano-clk"
-     echo "       Rebuild it with ../src/build-nanoclk.sh"
-     exit 1 ;;
-esac
+# Both shipped binaries touch the console directly - nano-clk writes clock
+# registers, quickmenu owns the framebuffer and the buttons - so confirm the
+# architecture here rather than discovering on the console that they will not
+# execute. Static matters as much as ARM: this is a glibc toolchain and the
+# console is musl, so a dynamic build would need the bundled runtime.
+for b in nano-clk quickmenu; do
+  case "$(file -b "$STAGE/$b" 2>/dev/null)" in
+    *"ARM"*"statically linked"*) : ;;
+    *) echo "ERROR: $b is not a static ARM binary:"
+       file -b "$STAGE/$b"
+       echo "       Rebuild it with ../src/build-${b#nano-}.sh"
+       exit 1 ;;
+  esac
+done
 
 # menubg.raw and videobg.raw are flat 240x240 RGB565 buffers built by
 # make-menu-bg.sh. Refuse to ship a truncated one: a short read would leave the
@@ -169,7 +204,15 @@ if [ -n "$(tail -c 1 "$DESK")" ]; then
   exit 1
 fi
 for s in $PAYLOAD_SCRIPTS; do sh -n "$STAGE/$s"; done
-python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$STAGE/quickmenu.py"
+
+# The menu reads these at startup and draws nothing where one is missing, so a
+# short or absent strip is a blank row on the console rather than an error.
+for f in menubg.raw videobg.raw; do
+  if [ "$(wc -c < "$STAGE/$f")" -ne 115200 ]; then
+    echo "ERROR: $f is $(wc -c < "$STAGE/$f") bytes, expected 115200."
+    exit 1
+  fi
+done
 echo "ok: .desktop ends with a newline, scripts parse, both menu pages are intact"
 
 # Nothing Minecraft, nothing personal, ever. Fail the build rather than trust

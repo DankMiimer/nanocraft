@@ -1,5 +1,57 @@
 # Changelog
 
+## v1.0.7
+
+**Play works on consoles that are not mine.** This is the release that fixes
+the report that has been open since v1.0.0: *"main menu works, options menu
+works, Play crashes to desktop."*
+
+Pressing Play opens the world list, and 0.8.1 answers that by asking RakNet to
+broadcast for LAN games. On a console with **no network interface at all** that
+faults — a null dereference inside `RakNet::RakPeer::Ping`, about eight seconds
+after the button, leaving the last drawn frame on the panel so it reads as a
+freeze rather than a crash.
+
+It never happened on the console this port was developed on, because that one
+has a WiFi dongle fitted for an unrelated project. Every console without a
+network hit it every time; the one it was written on never did.
+
+**The fix is to bring up loopback before starting the game.** `lo` exists on
+every kernel, costs nothing, and gives the socket layer something real to answer
+with. Reproduced on a factory RG Nano, fixed, and a world then created, played,
+saved and quit on that console.
+
+**The quick menu is a program now, not a script.**
+
+`quickmenu.py` is gone; `opk/quickmenu` is a static ARM binary built from
+`src/quickmenu.c`. The Python version could not run on DrUm78's factory image,
+which ships no interpreter at all — so on every console but the author's,
+**L + SELECT did nothing**, and worse, the launcher had already frozen the game
+to make room for a menu that never appeared. Same two pages, same rows, same
+settings, same exit codes; it reuses the existing pre-rendered assets byte for
+byte, so nothing about the build changed.
+
+The launcher also no longer freezes the game when there is no menu to show.
+
+**The log stops lying about how the game ended.**
+
+`run.sh` reported `status=138` — SIGUSR1 — on every run where the power button
+was pressed. That number came from the launcher's own `wait` being interrupted,
+not from the game, and it sent the investigation of the crash above after a
+signal the game demonstrably ignores. The log now distinguishes `game closed
+from the menu` from `game ended on its own, status=N`. **139 is a segfault; 138
+was an artifact.**
+
+**Also:** an optional memory tracer, off unless
+`/mnt/FunKey/nanocraft/memtrace` exists, which records per-thread state,
+`wchan`, signal dispositions and zram occupancy once a second; and an
+`env.txt` on the card whose `KEY=VALUE` lines are applied to the game's
+environment, so a setting can be A/B tested on a console with no network without
+rebuilding the package.
+
+**Known:** the diagnostic build's memory probe and crash-address resolver are
+still Python and do nothing on factory firmware. The rest of that build works.
+
 ## v1.0.6
 
 **The game no longer writes to your SD card to make room for itself.**
@@ -42,6 +94,13 @@ differently configured builds of the same kernel pass it — and loading into th
 wrong one corrupts memory rather than failing cleanly. `opk/modules/kernels`
 lists the builds somebody has actually verified, and nothing is loaded into a
 kernel that is not on it.
+
+Two sets ship, because there are two kernels: DrUm78's factory RG Nano image is
+built SMP and the console this port was developed on is a custom uniprocessor
+build, and their vermagic strings differ by that one word. The factory kernel
+was read out of DrUm78's own published SD-card image and its export table
+audited against every symbol the modules import, so a factory console is
+supported without having had one to develop on.
 
 If yours is not on the list NanoCraft says so and refuses to start rather than
 running without the memory it needs — a game whose menus all work and which dies

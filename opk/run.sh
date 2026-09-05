@@ -16,6 +16,16 @@ APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 DATA=/mnt/FunKey/nanocraft
 LOG=$DATA/run.log
 KEYMAP=/usr/local/sbin/keymap
+# The quick menu. A static ARM binary that ships in the package, so it does not
+# matter what the console's firmware provides - the Python version it replaces
+# could not run on the factory image at all, which is how a missing interpreter
+# came to look like the game hanging.
+MENUCMD="$APP_DIR/quickmenu"
+
+# Seconds since boot, for stamping log lines. Ordering in this file has been
+# read wrongly more than once: a line written by a signal handler can land
+# anywhere relative to the loop that follows it.
+now() { cut -d. -f1 /proc/uptime; }
 MAIN=$$
 
 mkdir -p "$DATA" 2>/dev/null
@@ -103,7 +113,14 @@ chmod +x "$DATA/pemenu.sh" 2>/dev/null
 
 KEYFILE="$APP_DIR/minecraft.key"
 [ -f "$DATA/minecraft.key" ] && KEYFILE="$DATA/minecraft.key"
-[ -x "$KEYMAP" ] && "$KEYMAP" load "$KEYFILE" && sleep 1
+if [ -x "$KEYMAP" ] && "$KEYMAP" load "$KEYFILE"; then
+  echo "[opk] keymap loaded from $KEYFILE" >> "$LOG"
+  sleep 1
+else
+  # Worth saying out loud: without the remap the game receives another
+  # console's key codes, and every button does the wrong thing.
+  echo "[opk] KEYMAP NOT LOADED ($KEYMAP) - buttons will be wrong" >> "$LOG"
+fi
 
 # --- cleanup helpers ---------------------------------------------------------
 release_memory() {
@@ -131,11 +148,164 @@ restore_clock() {
   [ -x "$APP_DIR/nano-clk" ] && "$APP_DIR/nano-clk" --restore >/dev/null 2>&1
 }
 
+# --- loopback -----------------------------------------------------------------
+# Pressing Play opens the world/server list, and 0.8.1 answers that by asking
+# RakNet to broadcast for LAN games. On a console with no network interface at
+# all that path faults - RakPeer::Ping dereferences a null - and the game dies
+# about eight seconds in, leaving the last frame on the panel. It never happened
+# on the console this port was developed on because that one has a WiFi dongle.
+#
+# Loopback costs nothing and exists on every kernel; bringing it up gives the
+# socket layer something real to answer with. Logged either way, because if the
+# crash survives this it rules the theory out rather than leaving it hanging.
+if [ -x /sbin/ifconfig ]; then
+  /sbin/ifconfig lo up 2>/dev/null
+  echo "[opk] interfaces: $(/sbin/ifconfig 2>/dev/null | awk '/^[a-z]/ {printf "%s ", $1}')" >> "$LOG"
+elif [ -x /sbin/ip ]; then
+  /sbin/ip link set lo up 2>/dev/null
+  echo "[opk] interfaces: $(/sbin/ip -o link 2>/dev/null | awk '{printf "%s ", $2}')" >> "$LOG"
+else
+  echo "[opk] no ifconfig or ip on this firmware" >> "$LOG"
+fi
+
+# --- experiment hook ----------------------------------------------------------
+# A plain KEY=VALUE file on the card, applied to the game's environment if it is
+# present. It exists so a setting can be A/B tested on the console without
+# rebuilding and reinstalling the package for every idea - which on a console
+# with no network is otherwise a card swap per attempt.
+#
+# set -a exports what the file defines, because launch-pe-nano.sh reads these
+# from the environment and every value it takes is written as ${VAR:-default}.
+if [ -f "$DATA/env.txt" ]; then
+  set -a
+  . "$DATA/env.txt"
+  set +a
+  echo "[opk] env.txt applied: $(tr '
+' ' ' < "$DATA/env.txt")" >> "$LOG"
+fi
+
+# --- optional memory trace ----------------------------------------------------
+# Off unless $DATA/memtrace exists, so it costs one test for everybody else.
+#
+# It exists because the interesting failure on this hardware leaves a picture on
+# the screen and no exit code to read: the game dies, nothing repaints, and the
+# console has to be power-cycled. Anything not written and synced before that is
+# gone. So this writes as it goes, and does not depend on any later step - the
+# diagnostic build's own crash section never runs if the console is powered off
+# while it is still waiting for the game.
+#
+# POSIX shell only. The factory firmware ships no Python.
+if [ -f "$DATA/memtrace" ]; then
+  # Make the kernel print faulting addresses. The diagnostic build does this
+  # too, but the normal build is what people actually run.
+  echo 1 > /proc/sys/kernel/print-fatal-signals 2>/dev/null
+  (
+    TRACE=$DATA/memtrace.log
+    KLOG=$DATA/memtrace-dmesg.txt
+    TLOG=$DATA/memtrace-threads.txt
+    MLOG=$DATA/memtrace-maps.txt
+    echo "# t state avail_kb free_kb zram_orig_kb zram_ram_kb rss_kb vmswap_kb SigIgn SigCgt pgrp found game alive" > "$TRACE"
+    t=0
+    gpid=
+    while kill -0 "$MAIN" 2>/dev/null; do
+      # Look every tick rather than caching the pid. Caching meant that if the
+      # game's pid ever changed - a fork, a re-exec - the tracer went on
+      # watching a pid that no longer existed and reported it gone, while the
+      # real process carried on running. Every "it exits after ten seconds"
+      # reading came from that.
+      gpid=
+      for c in /proc/[0-9]*/cmdline; do
+        if tr '\000' ' ' < "$c" 2>/dev/null | grep -q '/nanocraft/ninecraft'; then
+          gpid=$(echo "$c" | cut -d/ -f3)
+          break
+        fi
+      done 2>/dev/null
+      state=none
+      rss=0
+      vmswap=0
+      sigign=-
+      sigcgt=-
+      pgrp=-
+      if [ -n "$gpid" ] && [ -r "/proc/$gpid/stat" ]; then
+        state=$(awk '{print $3}' "/proc/$gpid/stat" 2>/dev/null)
+        # Field 5 is the process group. If it matches the launcher's, a signal
+        # sent to the group reaches the game whatever the launcher intended.
+        pgrp=$(awk '{print $5}' "/proc/$gpid/stat" 2>/dev/null)
+        rss=$(awk '/^VmRSS:/ {print $2}' "/proc/$gpid/status" 2>/dev/null)
+        vmswap=$(awk '/^VmSwap:/ {print $2}' "/proc/$gpid/status" 2>/dev/null)
+        # SIGUSR1 is signal 10, so bit 9 - mask 0x200. Ignored means the
+        # launcher's `trap "" USR1` survived exec; caught means the game
+        # installed its own handler afterwards and undid it.
+        sigign=$(awk '/^SigIgn:/ {print $2}' "/proc/$gpid/status" 2>/dev/null)
+        sigcgt=$(awk '/^SigCgt:/ {print $2}' "/proc/$gpid/status" 2>/dev/null)
+      elif [ -n "$gpid" ]; then
+        state=gone
+      fi
+      avail=$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)
+      free=$(awk '/^MemFree:/ {print $2}' /proc/meminfo)
+      if [ -r /sys/block/zram0/mm_stat ]; then
+        set -- $(cat /sys/block/zram0/mm_stat)
+        zo=$(( $1 / 1024 )); zr=$(( $3 / 1024 ))
+      else
+        zo=0; zr=0
+      fi
+      # $GAME is run.sh's own child pid, in scope here because this is a
+      # subshell of it. Recording both it and the pid found by scanning /proc
+      # settles whether they are the same process - the trace has said "gone"
+      # while run.sh went on waiting, and both cannot be right.
+      if kill -0 "${GAME:-}" 2>/dev/null; then galive=y; else galive=n; fi
+      echo "$t ${state:-?} $avail $free $zo $zr ${rss:-0} ${vmswap:-0} ${sigign:--} ${sigcgt:--} ${pgrp:--} found=${gpid:--} game=${GAME:-none} alive=$galive" >> "$TRACE"
+      # A process in state S is blocked on something, and wchan names what. The
+      # game runs eight threads and the blocked one need not be the leader, so
+      # dump them all. Overwritten each tick: the copy that matters is the last
+      # one before the console is powered off.
+      if [ -n "$gpid" ] && [ -d "/proc/$gpid/task" ]; then
+        {
+          echo "t=$t  pid=$gpid"
+          for tk in /proc/"$gpid"/task/*; do
+            tid=${tk##*/}
+            tst=$(awk '{print $3}' "$tk/stat" 2>/dev/null)
+            twc=$(cat "$tk/wchan" 2>/dev/null)
+            # comm names the thread - llvmpipe-0, an audio thread, a chunk
+            # builder - which is the difference between counting blocked threads
+            # and knowing which part of the port is stuck.
+            tnm=$(cat "$tk/comm" 2>/dev/null)
+            # syscall is "nr arg0 arg1 ... sp pc". For a futex wait arg0 is the
+            # address being waited on, so threads queued on the SAME address are
+            # queued on the same lock - which is what names the deadlock rather
+            # than just proving there is one.
+            tsc=$(cat "$tk/syscall" 2>/dev/null)
+            echo "  tid=$tid name=${tnm:-?} state=${tst:-?} wchan=${twc:-?}"
+            echo "      syscall=${tsc:-unavailable}"
+          done
+        } > "$TLOG" 2>/dev/null
+      fi
+
+      # The map, captured in the SAME tick as the thread dump. Addresses move
+      # with ASLR, so a map from another run resolves nothing - and the blocked
+      # program counters are the whole question: which library the deadlocked
+      # threads are parked in.
+      if [ -n "$gpid" ] && [ -r "/proc/$gpid/maps" ]; then
+        cat "/proc/$gpid/maps" > "$MLOG" 2>/dev/null
+      fi
+
+      # The kernel ring buffer carries the fatal-signal line with the faulting
+      # address. Rewrite it every tick rather than reading it once at the end,
+      # because there may be no end.
+      dmesg > "$KLOG" 2>/dev/null
+      sync
+      t=$(( t + 1 ))
+      sleep 1
+    done
+  ) >/dev/null 2>&1 &
+fi
+
 # --- starting the game -------------------------------------------------------
 # In a function because the quick menu can ask for a restart, which is how a
 # screen-size change is applied: the size is read by the game at startup and
 # cannot be changed in a running process.
 GAME=
+ENDED_BY_MENU=0
 start_game() {
   # 120x120 is the default: it renders in a quarter of the pixels for about
   # 11.9 fps against 240x240's 7.8, and the reason it was not the default before
@@ -173,7 +343,7 @@ start_game() {
   FPSCAP=0
   [ -f "$DATA/fpscap.txt" ] && read FPSCAP < "$DATA/fpscap.txt" 2>/dev/null
   case "$FPSCAP" in ''|*[!0-9]*) FPSCAP=0 ;; esac
-  echo "[opk] starting at ${W}x${H} gui=$GS fov=$FOV cap=$FPSCAP" >> "$LOG"
+  echo "[opk] t=$(now) starting at ${W}x${H} gui=$GS fov=$FOV cap=$FPSCAP" >> "$LOG"
 
   # MIYOO_NO_GRAB=1 is what makes the quick menu possible. Ninecraft would
   # otherwise take an exclusive EVIOCGRAB on /dev/input/event0 and no other
@@ -185,6 +355,7 @@ start_game() {
     MIYOO_NO_GRAB=1 \
     sh "$APP_DIR/launch-pe-nano.sh" "$DATA/game081" >> "$LOG" 2>&1 &
   GAME=$!
+  echo "[opk] t=$(now) game pid=$GAME" >> "$LOG"
 
   # Diagnostic hook: inert unless a diagnostic build sets NANOCRAFT_DIAG=1. A
   # crash's program counter means nothing on its own; resolved against the
@@ -211,6 +382,7 @@ start_game() {
 # Ninecraft does not necessarily honour SIGTERM, and a "close game" that leaves
 # the game running is worse than not offering it. Ask politely, then insist.
 stop_game() {
+  ENDED_BY_MENU=1
   kill -TERM "$GAME" 2>/dev/null
   i=0
   while [ $i -lt 12 ] && kill -0 "$GAME" 2>/dev/null; do
@@ -234,6 +406,10 @@ stop_game() {
 MENUFLAG=/tmp/nanocraft.menu
 RESTART_REQUESTED=0
 on_power() {
+  # Logged because it is the difference between the game dying on its own
+  # and the console asking it to stop, and the exit code alone cannot say
+  # which: SIGUSR1 arriving here is the power or menu button.
+  echo "[opk] t=$(now) SIGUSR1 received - power/menu button" >> "$LOG"
   # Cancel first and ask questions later. Inline pkill rather than
   # `powerdown handle`, which would fork a second shell to do exactly this.
   pkill -f "powerdown schedule" 2>/dev/null
@@ -243,10 +419,19 @@ on_power() {
   [ -f "$MENUFLAG" ] && return
   : > "$MENUFLAG"
 
+  # Do not freeze the game unless there is really a menu to put in front of it.
+  # Stopping it blanks nothing - the last frame stays on the panel - so a menu
+  # that then fails to appear is indistinguishable from the console hanging.
+  if [ ! -x "$MENUCMD" ]; then
+    echo "[opk] no quick menu available ($MENUCMD) - button ignored" >> "$LOG"
+    rm -f "$MENUFLAG"
+    return
+  fi
+
   # Freeze the game so it stops repainting /dev/fb0, then let the menu grab the
   # buttons and own the screen.
   kill -STOP "$GAME" 2>/dev/null
-  MCPE_DATA="$DATA" /usr/bin/python3 "$APP_DIR/quickmenu.py" >> "$LOG" 2>&1
+  MCPE_DATA="$DATA" "$MENUCMD" >> "$LOG" 2>&1
   rc=$?
   rm -f "$MENUFLAG"
   kill -CONT "$GAME" 2>/dev/null
@@ -285,8 +470,28 @@ while : ; do
   # reason the quick menu used to work exactly once per launch.
   while kill -0 "$GAME" 2>/dev/null; do
     wait "$GAME"
-    RC=$?
+    _st=$?
+    # `wait` also returns when a trapped signal has been handled, with
+    # 128+signum, which is not the game's status at all. Believing it produced a
+    # log line saying the game had been killed by SIGUSR1 on every run where the
+    # menu was opened - and sent a debugging session after a signal that the
+    # game demonstrably ignores. Only take the status once the game has gone.
+    kill -0 "$GAME" 2>/dev/null || RC=$_st
   done
+  # The game's TRUE status, written by the wrapper subshell the moment it
+  # returns. $RC cannot be trusted: `wait` also returns when a trapped signal is
+  # handled, with 128+signum, and that artifact has been reported as the game's
+  # exit code on every run where the power button was pressed.
+  # 128+n means signal n killed it: 139 is a segfault, 137 a kill, 138 SIGUSR1.
+  # `wait` also returns when a trapped signal is handled, with 128+signum, so
+  # $RC is only the game's own status when we did not end it ourselves. Saying
+  # which is which matters: a bare 139 in this log is a segfault worth chasing,
+  # and for a long time an artifact was being reported as one.
+  if [ "$ENDED_BY_MENU" = 1 ]; then
+    echo "[opk] t=$(now) game closed from the menu" >> "$LOG"
+  else
+    echo "[opk] t=$(now) game ended on its own, status=$RC" >> "$LOG"
+  fi
 
   [ "$RESTART_REQUESTED" = 1 ] || break
   echo "[opk] restarting at the new screen size" >> "$LOG"

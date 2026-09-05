@@ -146,7 +146,39 @@ release_memory() {
 # survive a reboot either way.
 restore_clock() {
   [ -x "$APP_DIR/nano-clk" ] && "$APP_DIR/nano-clk" --restore >/dev/null 2>&1
+  # Reaching here means the console survived the session at whatever clock was
+  # applied, so the saved one is trusted for next time.
+  rm -f "$DATA/.clock-pending"
 }
+
+# --- remembered CPU clock -----------------------------------------------------
+# Screen size, interface scale, FOV and the frame cap have always been written to
+# the card and read back here. The clock was the exception: it applied at once
+# and was restored to stock on exit, so it had to be dialled in again every
+# launch. The quick menu now writes clock.txt and this puts it back.
+#
+# The stock clock is still restored when the game exits - nothing outside the
+# game is left overclocked, and a reboot clears it regardless.
+#
+# THE GUARD MATTERS. This SoC has no thermal management and no voltage control,
+# and what an individual unit tolerates is not knowable from here. A saved clock
+# that hangs the console would otherwise hang it on every launch, with no way
+# back except editing the card. So a marker is written before applying and
+# cleared only after the game has exited normally; if it is still there at
+# startup, the last run at this clock did not finish and stock is used instead.
+if [ -f "$DATA/clock.txt" ] && [ -x "$APP_DIR/nano-clk" ]; then
+  read SAVED_MHZ < "$DATA/clock.txt" 2>/dev/null || SAVED_MHZ=
+  case "${SAVED_MHZ:-}" in ''|*[!0-9]*) SAVED_MHZ= ;; esac
+  if [ -n "${SAVED_MHZ:-}" ] && [ -f "$DATA/.clock-pending" ]; then
+    echo "[opk] last run at ${SAVED_MHZ} MHz did not exit cleanly - using stock" >> "$LOG"
+    rm -f "$DATA/.clock-pending"
+  elif [ -n "${SAVED_MHZ:-}" ]; then
+    : > "$DATA/.clock-pending"
+    sync
+    "$APP_DIR/nano-clk" --set "$SAVED_MHZ" >> "$LOG" 2>&1
+    echo "[opk] restored saved CPU clock ${SAVED_MHZ} MHz" >> "$LOG"
+  fi
+fi
 
 # --- loopback -----------------------------------------------------------------
 # Pressing Play opens the world/server list, and 0.8.1 answers that by asking

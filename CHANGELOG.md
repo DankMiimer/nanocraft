@@ -1,5 +1,52 @@
 # Changelog
 
+## v1.0.8
+
+**About 16% more frames, by putting a default back where the code said it was.**
+
+`launch-pe-nano.sh` had been setting `FBEGL_PBO=1` since the beginning, turning
+on the presenter's asynchronous pixel-pack path. The presenter's own source says
+that path should be off here, and says why: it is a two-core optimisation, and
+with one core there is nothing for the readback to overlap into. It left a note
+asking someone to measure rather than assume. Measured, in a world at 120x120:
+
+| | PBO on | PBO off |
+| --- | ---: | ---: |
+| readback | 37.6 ms | **0.4 ms** |
+| glFinish | — | 33.3 ms |
+| total per frame | 77.7 ms | **67.1 ms** |
+| **frame rate** | **12.9 fps** | **14.9 fps** |
+
+The async path never hid the wait; it added about 4 ms a frame on top of it and
+reported the same stall under a different name. It is now off by default, which
+is what `src/fbegl_nano.c` documents. `FBEGL_PBO=1` still turns it back on.
+
+**The frame cap goes up to 30.** 20, 25 and 30 FPS join the ladder in
+**VIDEO → FPS CAP**. A cap does not make anything faster, it makes the pace
+even — and what is reachable moved when the present path changed.
+
+**The CPU clock is remembered.** Screen size, interface scale, FOV and the frame
+cap have always been written to the card and read back at launch; the clock was
+the one dial that reset every time, because it applies as a live register write
+and is restored to stock when the game exits. The quick menu now saves it and
+the launcher puts it back, so a console does not have to be dialled in again
+every session.
+
+Stock is still restored on exit and a reboot clears it regardless — nothing
+outside the game is left overclocked. Delete `clock.txt` from the card to forget
+it.
+
+**With a guard, because this SoC has no thermal management and no voltage
+control.** A saved clock a particular unit cannot hold would otherwise hang the
+console on every launch, recoverable only by editing the card on a PC. So a
+marker is written before the saved clock is applied and cleared only after the
+game exits normally. If it is still there at startup, the last run at that clock
+did not finish, and stock is used instead:
+
+```text
+[opk] last run at 1248 MHz did not exit cleanly - using stock
+```
+
 ## v1.0.7
 
 **Play works on consoles that are not mine.** This is the release that fixes

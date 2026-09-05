@@ -100,7 +100,8 @@ static const int FOVS[6] = { 50, 60, 70, 80, 90, 100 };
 /* Frame cap, passed to the presenter as FBEGL_FPS_CAP. 0 is off and off is the
  * default: nothing paced frames before this existed, and a cap that arrived
  * switched on would quietly slow every console that upgraded. */
-static const int CAPS[6] = { 0, 6, 8, 10, 12, 15 };
+static const int CAPS[9] = { 0, 6, 8, 10, 12, 15, 20, 25, 30 };
+#define N_CAPS 9
 #define DEFAULT_CAP_INDEX 0
 
 /* The CPU ladder, 48 MHz per step from stock. It stops at 1248: the V3s is
@@ -246,6 +247,9 @@ static void bar(int top, int pct)
     rect(BAR_X + 2, y + 2, fill, BAR_H - 4, C_BAR_FG);
 }
 
+/* Defined with the other settings writers below; set_clock needs it here. */
+static void write_int_setting(const char *file, int v);
+
 /* ------------------------------------------------------------- subprocesses */
 
 /* Run a helper and return its stdout. fork/exec rather than popen so nothing
@@ -363,7 +367,16 @@ static int set_clock(int mhz)
     argv[2] = num;
     argv[3] = NULL;
     run_capture(argv, NULL, 0);
-    return read_clock();
+    mhz = read_clock();
+    /* Remember it. Screen size, interface scale, FOV and the frame cap have
+     * always been written straight to the card and read back by the launcher;
+     * the clock was the one dial that reset every launch, so it had to be
+     * dialled in again every time. run.sh reapplies this at startup and still
+     * restores the stock clock on exit, so nothing outside the game is left
+     * overclocked. Delete clock.txt from the card to forget it. */
+    if (mhz > 0)
+        write_int_setting("clock.txt", mhz);
+    return mhz;
 }
 
 /* ---------------------------------------------------------------- settings */
@@ -495,7 +508,7 @@ struct assets {
     unsigned char *clk[6];
     unsigned char *gs[3];
     unsigned char *fov[6];
-    unsigned char *cap[6];
+    unsigned char *cap[N_CAPS];
 };
 
 static void load_assets(struct assets *a)
@@ -519,7 +532,7 @@ static void load_assets(struct assets *a)
         snprintf(name, sizeof name, "fov%d.raw", FOVS[i]);
         a->fov[i] = load_raw(name, STRIP_BYTES);
     }
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < N_CAPS; i++) {
         if (CAPS[i] == 0)
             snprintf(name, sizeof name, "capoff.raw");
         else
@@ -590,7 +603,7 @@ int main(void)
     gs_i = read_guiscale_index();
     fov_i = index_of(FOVS, 6, read_first_int("fov.txt", FOVS[DEFAULT_FOV_INDEX]),
                      DEFAULT_FOV_INDEX);
-    cap_i = index_of(CAPS, 6, read_first_int("fpscap.txt", CAPS[DEFAULT_CAP_INDEX]),
+    cap_i = index_of(CAPS, N_CAPS, read_first_int("fpscap.txt", CAPS[DEFAULT_CAP_INDEX]),
                      DEFAULT_CAP_INDEX);
     clock_mhz = read_clock();
 
@@ -678,7 +691,7 @@ int main(void)
                     } else if (sel == V_CAP) {
                         cap_i += dir;              /* same clamped ladder */
                         if (cap_i < 0) cap_i = 0;
-                        if (cap_i > 5) cap_i = 5;
+                        if (cap_i > N_CAPS - 1) cap_i = N_CAPS - 1;
                         write_int_setting("fpscap.txt", CAPS[cap_i]);
                         dirty = 1;
                     }

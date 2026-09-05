@@ -89,7 +89,10 @@ done
 # Frame cap. OFF is how the port has always behaved, so it takes the calm
 # colour; any cap is a deliberate slowing-down and takes the gold.
 strip capoff "OFF" 0x9AA8C0
-for c in 6 8 10 12 15; do
+# 20/25/30 are above what a world sustains today, but the cap is also what
+# smooths the menus and the title screen, and the presenter default changed
+# in v1.0.8 - what is reachable is not fixed.
+for c in 6 8 10 12 15 20 25 30; do
   strip "cap$c" "$c FPS" 0xF0C460
 done
 

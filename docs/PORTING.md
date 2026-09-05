@@ -199,6 +199,7 @@ the single largest lever was already pulled before the first Nano run.
 | lever | result |
 | --- | --- |
 | `LP_NUM_THREADS` 0 / 1 / 2 | **no difference** (84.7 / 85.1 / 85.8 ms warm) |
+| `FBEGL_PBO` 1 / 0 | **0 is faster: 77.7 vs 67.1 ms, 12.9 vs 14.9 fps** |
 | `FBEGL_PBO` | no difference on one core — nothing to overlap with |
 | softpipe | 3.7x slower than llvmpipe |
 | `LP_NATIVE_VECTOR_WIDTH=128` | no change (MM+ measured; already NEON width) |

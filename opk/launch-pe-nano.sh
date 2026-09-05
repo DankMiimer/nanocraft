@@ -69,7 +69,18 @@ export SDL_AUDIODRIVER=dummy
 
 export FBNANO_ROT="${FBNANO_ROT:-0}"
 export FBPRESENT_QUIET="${FBPRESENT_QUIET:-1}"
-export FBEGL_PBO="${FBEGL_PBO:-1}"
+# OFF, which is what the presenter itself documents as its default and what
+# this console actually wants. The async pixel-pack path is a two-core
+# optimisation: with one core there is nothing for the readback to overlap
+# into, so it does not hide the wait, it just adds to it. Measured in a world
+# at 120x120, median of ~450 and ~170 samples:
+#
+#   PBO=1   readpx-issue 37.6 ms    total 77.7 ms   12.9 fps
+#   PBO=0   readpx 0.4 + glFinish 33.3   total 67.1 ms   14.9 fps
+#
+# Same unavoidable wait for llvmpipe to finish; the async path charged about
+# 4 ms a frame extra to disguise it. Set FBEGL_PBO=1 to measure it again.
+export FBEGL_PBO="${FBEGL_PBO:-0}"
 export NINECRAFT_WIDTH="$W"
 export NINECRAFT_HEIGHT="$H"
 

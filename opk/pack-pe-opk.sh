@@ -44,7 +44,7 @@ PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
               res240.raw res120.raw
               gsauto.raw gsfit.raw gsstock.raw
               fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw
-              capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw
+              capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw cap20.raw cap25.raw cap30.raw
               cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
 # nano-clk is a static ARM binary, not a script: it writes the CPU PLL through
 # /dev/mem, which the quick menu's CPU row drives. Static so it depends on
@@ -139,7 +139,7 @@ done
 # trying to read what it is set to.
 for f in res240.raw res120.raw gsauto.raw gsfit.raw gsstock.raw \
          fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw \
-         capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw \
+         capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw cap20.raw cap25.raw cap30.raw \
          cpu1008.raw cpu1056.raw cpu1104.raw \
          cpu1152.raw cpu1200.raw cpu1248.raw; do
   if [ "$(wc -c < "$STAGE/$f")" -ne 2736 ]; then

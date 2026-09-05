@@ -49,6 +49,14 @@ pixel is drawn by a software rasterizer.
 against the same restored world — not by standing still on a title screen. A
 title screen reads 11.6 fps at 240x240 and means nothing.
 
+> **These numbers are from before v1.0.8 and now understate the port.** The
+> launcher had been overriding the presenter's own documented default and
+> enabling an asynchronous present path that cannot pay on a single core. With
+> it off, a live session at 120x120 measured **12.9 → 14.9 fps median**, about
+> +16%, with the readback dropping from 37.6 ms a frame to 0.4. The table below
+> and the frame-time model that follows have not been re-measured on the replay
+> rig, so treat them as a floor rather than as current.
+
 **Why 120x120 is the default.** Quartering the pixel count buys +52%, not the
 4x a fill-rate-bound workload would give, because about **70 ms of every frame
 is fixed** — roughly 46 ms of Minecraft's own logic and 23 ms of rasterizer

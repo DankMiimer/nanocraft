@@ -38,146 +38,173 @@
 [    0.000000] NR_IRQS: 16, nr_irqs: 16, preallocated irqs: 16
 [    0.000000] arch_timer: cp15 timer(s) running at 24.00MHz (virt).
 [    0.000000] clocksource: arch_sys_counter: mask: 0xffffffffffffff max_cycles: 0x588fe9dc0, max_idle_ns: 440795202592 ns
-[    0.000006] sched_clock: 56 bits at 24MHz, resolution 41ns, wraps every 4398046511097ns
+[    0.000007] sched_clock: 56 bits at 24MHz, resolution 41ns, wraps every 4398046511097ns
 [    0.000016] Switching to timer-based delay loop, resolution 41ns
-[    0.000182] clocksource: timer: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 79635851949 ns
-[    0.000414] Console: colour dummy device 80x30
-[    0.000453] Calibrating delay loop (skipped), value calculated using timer frequency.. 48.00 BogoMIPS (lpj=240000)
+[    0.000184] clocksource: timer: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 79635851949 ns
+[    0.000418] Console: colour dummy device 80x30
+[    0.000454] Calibrating delay loop (skipped), value calculated using timer frequency.. 48.00 BogoMIPS (lpj=240000)
 [    0.000467] pid_max: default: 32768 minimum: 301
-[    0.000630] Mount-cache hash table entries: 1024 (order: 0, 4096 bytes)
-[    0.000642] Mountpoint-cache hash table entries: 1024 (order: 0, 4096 bytes)
-[    0.001320] CPU: Testing write buffer coherency: ok
-[    0.001713] CPU0: update cpu_capacity 1024
-[    0.001723] CPU0: thread -1, cpu 0, socket 0, mpidr 80000000
-[    0.002158] Setting up static identity map for 0x40100000 - 0x40100060
-[    0.002322] Hierarchical SRCU implementation.
-[    0.002825] smp: Bringing up secondary CPUs ...
-[    0.002836] smp: Brought up 1 node, 1 CPU
-[    0.002843] SMP: Total of 1 processors activated (48.00 BogoMIPS).
-[    0.002848] CPU: All CPU(s) started in SVC mode.
-[    0.003602] devtmpfs: initialized
-[    0.006930] VFP support v0.3: implementor 41 architecture 2 part 30 variant 7 rev 5
-[    0.007276] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 19112604462750000 ns
-[    0.007298] futex hash table entries: 256 (order: 2, 16384 bytes)
-[    0.007479] pinctrl core: initialized pinctrl subsystem
-[    0.008209] NET: Registered protocol family 16
-[    0.008617] DMA: preallocated 256 KiB pool for atomic coherent allocations
-[    0.009569] hw-breakpoint: found 5 (+1 reserved) breakpoint and 4 watchpoint registers.
-[    0.009579] hw-breakpoint: maximum watchpoint size is 8 bytes.
-[    0.020985] SCSI subsystem initialized
-[    0.021104] usbcore: registered new interface driver usbfs
-[    0.021170] usbcore: registered new interface driver hub
-[    0.021261] usbcore: registered new device driver usb
-[    0.021675] Advanced Linux Sound Architecture Driver Initialized.
-[    0.022707] clocksource: Switched to clocksource arch_sys_counter
-[    0.033889] NET: Registered protocol family 2
-[    0.034560] TCP established hash table entries: 1024 (order: 0, 4096 bytes)
-[    0.034590] TCP bind hash table entries: 1024 (order: 1, 8192 bytes)
-[    0.034610] TCP: Hash tables configured (established 1024 bind 1024)
-[    0.034745] UDP hash table entries: 256 (order: 1, 8192 bytes)
-[    0.034789] UDP-Lite hash table entries: 256 (order: 1, 8192 bytes)
-[    0.034984] NET: Registered protocol family 1
-[    0.037189] workingset: timestamp_bits=30 max_order=14 bucket_order=0
+[    0.000637] Mount-cache hash table entries: 1024 (order: 0, 4096 bytes)
+[    0.000648] Mountpoint-cache hash table entries: 1024 (order: 0, 4096 bytes)
+[    0.001333] CPU: Testing write buffer coherency: ok
+[    0.001720] CPU0: update cpu_capacity 1024
+[    0.001732] CPU0: thread -1, cpu 0, socket 0, mpidr 80000000
+[    0.002156] Setting up static identity map for 0x40100000 - 0x40100060
+[    0.002323] Hierarchical SRCU implementation.
+[    0.002831] smp: Bringing up secondary CPUs ...
+[    0.002839] smp: Brought up 1 node, 1 CPU
+[    0.002847] SMP: Total of 1 processors activated (48.00 BogoMIPS).
+[    0.002851] CPU: All CPU(s) started in SVC mode.
+[    0.003597] devtmpfs: initialized
+[    0.006926] VFP support v0.3: implementor 41 architecture 2 part 30 variant 7 rev 5
+[    0.007270] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 19112604462750000 ns
+[    0.007293] futex hash table entries: 256 (order: 2, 16384 bytes)
+[    0.007482] pinctrl core: initialized pinctrl subsystem
+[    0.008213] NET: Registered protocol family 16
+[    0.008624] DMA: preallocated 256 KiB pool for atomic coherent allocations
+[    0.009581] hw-breakpoint: found 5 (+1 reserved) breakpoint and 4 watchpoint registers.
+[    0.009590] hw-breakpoint: maximum watchpoint size is 8 bytes.
+[    0.020969] SCSI subsystem initialized
+[    0.021084] usbcore: registered new interface driver usbfs
+[    0.021147] usbcore: registered new interface driver hub
+[    0.021239] usbcore: registered new device driver usb
+[    0.021654] Advanced Linux Sound Architecture Driver Initialized.
+[    0.022702] clocksource: Switched to clocksource arch_sys_counter
+[    0.033871] NET: Registered protocol family 2
+[    0.034540] TCP established hash table entries: 1024 (order: 0, 4096 bytes)
+[    0.034569] TCP bind hash table entries: 1024 (order: 1, 8192 bytes)
+[    0.034589] TCP: Hash tables configured (established 1024 bind 1024)
+[    0.034730] UDP hash table entries: 256 (order: 1, 8192 bytes)
+[    0.034776] UDP-Lite hash table entries: 256 (order: 1, 8192 bytes)
+[    0.034973] NET: Registered protocol family 1
+[    0.037181] workingset: timestamp_bits=30 max_order=14 bucket_order=0
 [    0.042331] squashfs: version 4.0 (2009/01/31) Phillip Lougher
-[    0.047267] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 250)
-[    0.047282] io scheduler noop registered
-[    0.047287] io scheduler deadline registered
-[    0.047607] io scheduler cfq registered (default)
-[    0.047615] io scheduler mq-deadline registered
-[    0.047619] io scheduler kyber registered
-[    0.047934] sun4i-usb-phy 1c19400.phy: could not find pctldev for node /soc/pinctrl@01c20800/usb0_id_detect_pin@0, deferring probe
-[    0.051442] sun8i-v3s-pinctrl 1c20800.pinctrl: initialized sunXi PIO driver
-[    0.127867] Serial: 8250/16550 driver, 8 ports, IRQ sharing disabled
-[    0.130699] console [ttyS0] disabled
-[    0.150963] 1c28000.serial: ttyS0 at MMIO 0x1c28000 (irq = 34, base_baud = 1500000) is a U6_16550A
-[    0.151043] console [ttyS0] enabled
-[    0.153364] loop: module loaded
-[    0.154977] ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
-[    0.154988] ehci-platform: EHCI generic platform driver
-[    0.155263] ehci-platform 1c1a000.usb: EHCI Host Controller
-[    0.155308] ehci-platform 1c1a000.usb: new USB bus registered, assigned bus number 1
-[    0.155479] ehci-platform 1c1a000.usb: irq 25, io mem 0x01c1a000
-[    0.182734] ehci-platform 1c1a000.usb: USB 2.0 started, EHCI 1.00
+[    0.047275] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 250)
+[    0.047290] io scheduler noop registered
+[    0.047295] io scheduler deadline registered
+[    0.047609] io scheduler cfq registered (default)
+[    0.047617] io scheduler mq-deadline registered
+[    0.047621] io scheduler kyber registered
+[    0.047938] sun4i-usb-phy 1c19400.phy: could not find pctldev for node /soc/pinctrl@01c20800/usb0_id_detect_pin@0, deferring probe
+[    0.051447] sun8i-v3s-pinctrl 1c20800.pinctrl: initialized sunXi PIO driver
+[    0.127879] Serial: 8250/16550 driver, 8 ports, IRQ sharing disabled
+[    0.130752] console [ttyS0] disabled
+[    0.151016] 1c28000.serial: ttyS0 at MMIO 0x1c28000 (irq = 34, base_baud = 1500000) is a U6_16550A
+[    0.151098] console [ttyS0] enabled
+[    0.153414] loop: module loaded
+[    0.155024] ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+[    0.155035] ehci-platform: EHCI generic platform driver
+[    0.155318] ehci-platform 1c1a000.usb: EHCI Host Controller
+[    0.155364] ehci-platform 1c1a000.usb: new USB bus registered, assigned bus number 1
+[    0.155543] ehci-platform 1c1a000.usb: irq 25, io mem 0x01c1a000
+[    0.182731] ehci-platform 1c1a000.usb: USB 2.0 started, EHCI 1.00
 [    0.183808] hub 1-0:1.0: USB hub found
-[    0.183881] hub 1-0:1.0: 1 port detected
-[    0.184503] ohci_hcd: USB 1.1 'Open' Host Controller (OHCI) Driver
-[    0.184512] ohci-platform: OHCI generic platform driver
-[    0.184846] ohci-platform 1c1a400.usb: Generic Platform OHCI controller
-[    0.184888] ohci-platform 1c1a400.usb: new USB bus registered, assigned bus number 2
-[    0.185015] ohci-platform 1c1a400.usb: irq 26, io mem 0x01c1a400
-[    0.257772] hub 2-0:1.0: USB hub found
-[    0.257847] hub 2-0:1.0: 1 port detected
-[    0.259089] i2c /dev entries driver
-[    0.260233] axp20x-i2c 0-0034: AXP20x variant AXP209 found
-[    0.269844] axp20x-gpio axp20x-gpio: AXP209 GPIO driver loaded
-[    0.270783] ldo1: supplied by regulator-dummy
-[    0.270999] ldo2: supplied by regulator-dummy
-[    0.272100] ldo3: supplied by regulator-dummy
-[    0.272862] ldo4: supplied by regulator-dummy
-[    0.273051] ldo5: supplied by regulator-dummy
-[    0.273690] dcdc2: supplied by regulator-dummy
-[    0.274332] dcdc3: supplied by regulator-dummy
-[    0.275797] axp20x-i2c 0-0034: AXP20X driver loaded
-[    0.281766] rtc-pcf8563 0-0051: rtc core: registered rtc-pcf8563 as rtc0
-[    0.284886] sunxi-wdt 1c20ca0.watchdog: Watchdog enabled (timeout=16 sec, nowayout=0)
-[    0.342750] sunxi-mmc 1c0f000.mmc: base:0xc4867000 irq:23
-[    0.343302] usbcore: registered new interface driver usbhid
-[    0.343310] usbhid: USB HID core driver
-[    0.343429] fbtft_of_value: height = 240
-[    0.343436] fbtft_of_value: buswidth = 8
-[    0.343442] fbtft_of_value: debug = 0
-[    0.343447] fbtft_of_value: rotate_soft = 270
-[    0.343454] fbtft_of_value: fps = 100
-[    0.343473] fbtft_probe_dt: te-irq = GPIO33
-[    0.343483] fbtft_probe_dt: TE GPIO33 => IRQ id = 38
-[    0.489260] Console: switching to colour frame buffer device 30x30
-[    0.490977] graphics fb0: fb_st7789v frame buffer, 240x240 used res out of 320x240 driver full res, 112 KiB video memory, 3 back buffers, fps=100, spi0.0 at 75 MHz, SPI mode async
-[    0.494382] usbcore: registered new interface driver snd-usb-audio
-[    0.496933] sun4i-codec 1c22c00.codec: Codec <-> 1c22c00.codec mapping ok
-[    0.500453] NET: Registered protocol family 10
-[    0.501749] Segment Routing with IPv6
-[    0.501850] sit: IPv6, IPv4 and MPLS over IPv4 tunneling driver
-[    0.502611] NET: Registered protocol family 17
-[    0.502817] Key type dns_resolver registered
-[    0.502915] Registering SWP/SWPB emulation handler
-[    0.505787] usb_phy_generic usb_phy_generic.0.auto: usb_phy_generic.0.auto supply vcc not found, using dummy regulator
-[    0.506267] musb-hdrc musb-hdrc.1.auto: MUSB HDRC host driver
-[    0.506288] musb-hdrc musb-hdrc.1.auto: new USB bus registered, assigned bus number 3
-[    0.507545] hub 3-0:1.0: USB hub found
-[    0.507781] hub 3-0:1.0: 1 port detected
-[    0.513542] mmc0: host does not support reading read-only switch, assuming write-enable
-[    0.515335] mmc0: Problem switching card into high-speed mode!
-[    0.515513] mmc0: new SDXC card at address 0001
-[    0.516348] mmcblk0: mmc0:0001 SD 58.2 GiB 
-[    0.518015]  mmcblk0: p1 p2 p3 p4
-[    0.543468] rtc-pcf8563 0-0051: setting system clock to 2026-09-05 19:52:15 UTC (1788637935)
-[    0.545008] PM: Image not found (code -22)
-[    0.547073] ldo3: disabling
-[    0.548661] ldo4: disabling
-[    0.548972] ALSA device list:
-[    0.548976]   #0: V3s Audio Codec
-[    0.556026] EXT4-fs (mmcblk0p2): barriers disabled
-[    0.559128] EXT4-fs (mmcblk0p2): mounted filesystem with writeback data mode. Opts: commit=120,data=writeback,barrier=0,journal_async_commit
-[    0.559220] VFS: Mounted root (ext4 filesystem) readonly on device 179:2.
-[    0.560356] devtmpfs: mounted
-[    0.561807] Freeing unused kernel memory: 1024K
-[    0.710880] FAT-fs (mmcblk0p4): utf8 is not a recommended IO charset for FAT filesystems, filesystem will be case sensitive!
-[    0.716991] FAT-fs (mmcblk0p4): Volume was not properly unmounted. Some data may be corrupt. Please run fsck.
-[    0.817174] Adding 131068k swap on /dev/mmcblk0p3.  Priority:-2 extents:1 across:131068k SS
-[    1.149573] Mass Storage Function, version: 2009/09/11
-[    1.149592] LUN: removable file: (no medium)
-[    1.406876] input: ample as /devices/virtual/input/input0
-[    1.539947] Starting ALSA: 
-[    1.639744] OK
-[    1.789394] configfs-gadget gadget: high-speed config #1: FunKey
-[    8.925835] share: start sharing the backing store partition
-[    9.893235] random: crng init done
-[ 4037.957359] FAT-fs (mmcblk0p4): utf8 is not a recommended IO charset for FAT filesystems, filesystem will be case sensitive!
-[ 4037.963980] FAT-fs (mmcblk0p4): Volume was not properly unmounted. Some data may be corrupt. Please run fsck.
-[ 4038.188697] share: stopped sharing the backing store partition
-[ 4058.069838] lz4_compress: loading out-of-tree module taints kernel.
-[ 4058.114277] zram: Added device: zram0
-[ 4058.120794] zram0: detected capacity change from 0 to 83886080
-[ 4058.240139] Adding 81916k swap on /dev/zram0.  Priority:100 extents:1 across:81916k SS
-[ 4059.479019] sh (20609): drop_caches: 3
-[ 4118.975438] sh (24319): drop_caches: 3
+[    0.183876] hub 1-0:1.0: 1 port detected
+[    0.184493] ohci_hcd: USB 1.1 'Open' Host Controller (OHCI) Driver
+[    0.184500] ohci-platform: OHCI generic platform driver
+[    0.184834] ohci-platform 1c1a400.usb: Generic Platform OHCI controller
+[    0.184878] ohci-platform 1c1a400.usb: new USB bus registered, assigned bus number 2
+[    0.185008] ohci-platform 1c1a400.usb: irq 26, io mem 0x01c1a400
+[    0.257783] hub 2-0:1.0: USB hub found
+[    0.257856] hub 2-0:1.0: 1 port detected
+[    0.259115] i2c /dev entries driver
+[    0.260273] axp20x-i2c 0-0034: AXP20x variant AXP209 found
+[    0.269557] axp20x-gpio axp20x-gpio: AXP209 GPIO driver loaded
+[    0.270503] ldo1: supplied by regulator-dummy
+[    0.270723] ldo2: supplied by regulator-dummy
+[    0.271825] ldo3: supplied by regulator-dummy
+[    0.272456] ldo4: supplied by regulator-dummy
+[    0.272617] ldo5: supplied by regulator-dummy
+[    0.273279] dcdc2: supplied by regulator-dummy
+[    0.273932] dcdc3: supplied by regulator-dummy
+[    0.275403] axp20x-i2c 0-0034: AXP20X driver loaded
+[    0.281365] rtc-pcf8563 0-0051: rtc core: registered rtc-pcf8563 as rtc0
+[    0.284426] sunxi-wdt 1c20ca0.watchdog: Watchdog enabled (timeout=16 sec, nowayout=0)
+[    0.342747] sunxi-mmc 1c0f000.mmc: base:0xc4867000 irq:23
+[    0.343310] usbcore: registered new interface driver usbhid
+[    0.343318] usbhid: USB HID core driver
+[    0.343436] fbtft_of_value: height = 240
+[    0.343442] fbtft_of_value: buswidth = 8
+[    0.343448] fbtft_of_value: debug = 0
+[    0.343454] fbtft_of_value: rotate_soft = 270
+[    0.343460] fbtft_of_value: fps = 100
+[    0.343478] fbtft_probe_dt: te-irq = GPIO33
+[    0.343488] fbtft_probe_dt: TE GPIO33 => IRQ id = 38
+[    0.489261] Console: switching to colour frame buffer device 30x30
+[    0.490992] graphics fb0: fb_st7789v frame buffer, 240x240 used res out of 320x240 driver full res, 112 KiB video memory, 3 back buffers, fps=100, spi0.0 at 75 MHz, SPI mode async
+[    0.494420] usbcore: registered new interface driver snd-usb-audio
+[    0.496985] sun4i-codec 1c22c00.codec: Codec <-> 1c22c00.codec mapping ok
+[    0.500528] NET: Registered protocol family 10
+[    0.501829] Segment Routing with IPv6
+[    0.501937] sit: IPv6, IPv4 and MPLS over IPv4 tunneling driver
+[    0.502853] NET: Registered protocol family 17
+[    0.502924] Key type dns_resolver registered
+[    0.503012] Registering SWP/SWPB emulation handler
+[    0.505841] usb_phy_generic usb_phy_generic.0.auto: usb_phy_generic.0.auto supply vcc not found, using dummy regulator
+[    0.506324] musb-hdrc musb-hdrc.1.auto: MUSB HDRC host driver
+[    0.506346] musb-hdrc musb-hdrc.1.auto: new USB bus registered, assigned bus number 3
+[    0.507590] hub 3-0:1.0: USB hub found
+[    0.507828] hub 3-0:1.0: 1 port detected
+[    0.513608] mmc0: host does not support reading read-only switch, assuming write-enable
+[    0.515409] mmc0: Problem switching card into high-speed mode!
+[    0.515595] mmc0: new SDXC card at address 0001
+[    0.516433] mmcblk0: mmc0:0001 SD 58.2 GiB 
+[    0.518091]  mmcblk0: p1 p2 p3 p4
+[    0.543651] rtc-pcf8563 0-0051: setting system clock to 2026-09-05 19:00:07 UTC (1788634807)
+[    0.545132] PM: Image not found (code -22)
+[    0.547591] ldo3: disabling
+[    0.549182] ldo4: disabling
+[    0.549496] ALSA device list:
+[    0.549501]   #0: V3s Audio Codec
+[    0.556605] EXT4-fs (mmcblk0p2): barriers disabled
+[    0.559803] EXT4-fs (mmcblk0p2): mounted filesystem with writeback data mode. Opts: commit=120,data=writeback,barrier=0,journal_async_commit
+[    0.559900] VFS: Mounted root (ext4 filesystem) readonly on device 179:2.
+[    0.561025] devtmpfs: mounted
+[    0.562477] Freeing unused kernel memory: 1024K
+[    0.713479] FAT-fs (mmcblk0p4): utf8 is not a recommended IO charset for FAT filesystems, filesystem will be case sensitive!
+[    0.821999] Adding 131068k swap on /dev/mmcblk0p3.  Priority:-2 extents:1 across:131068k SS
+[    1.154357] Mass Storage Function, version: 2009/09/11
+[    1.154378] LUN: removable file: (no medium)
+[    1.413857] input: ample as /devices/virtual/input/input0
+[    1.549339] Starting ALSA: 
+[    1.651124] OK
+[    1.786685] configfs-gadget gadget: high-speed config #1: FunKey
+[    7.977005] share: start sharing the backing store partition
+[    8.929442] random: crng init done
+[  260.825757] FAT-fs (mmcblk0p4): utf8 is not a recommended IO charset for FAT filesystems, filesystem will be case sensitive!
+[  261.060866] share: stopped sharing the backing store partition
+[  271.296860] lz4_compress: loading out-of-tree module taints kernel.
+[  271.361775] zram: Added device: zram0
+[  271.371568] zram0: detected capacity change from 0 to 83886080
+[  271.490150] Adding 81916k swap on /dev/zram0.  Priority:100 extents:1 across:81916k SS
+[  272.710401] sh (1864): drop_caches: 3
+[  291.041171] potentially unexpected fatal signal 11.
+[  291.041196] CPU: 0 PID: 1864 Comm: ld-linux-armhf. Tainted: G           O    4.14.14-funkey #1
+[  291.041200] Hardware name: Allwinner sun8i Family
+[  291.041207] task: c32145c0 task.stack: c326e000
+[  291.041215] PC is at 0xb1bb34f4
+[  291.041219] LR is at 0xb1bb0df5
+[  291.041223] pc : [<b1bb34f4>]    lr : [<b1bb0df5>]    psr: 600e0030
+[  291.041227] sp : be808340  ip : b1ccac30  fp : be80835c
+[  291.041231] r10: b6f0083c  r9 : ffffffff  r8 : 00004abc
+[  291.041236] r7 : b1c3f0fb  r6 : be80835c  r5 : be808370  r4 : b71cdb10
+[  291.041240] r3 : 00000000  r2 : be808368  r1 : 00000000  r0 : be80835c
+[  291.041247] Flags: nZCv  IRQs on  FIQs on  Mode USER_32  ISA Thumb  Segment user
+[  291.041252] Control: 10c5387d  Table: 40b0006a  DAC: 00000055
+[  291.041258] CPU: 0 PID: 1864 Comm: ld-linux-armhf. Tainted: G           O    4.14.14-funkey #1
+[  291.041261] Hardware name: Allwinner sun8i Family
+[  291.041265] Backtrace: 
+[  291.041288] [<c010c310>] (dump_backtrace) from [<c010c658>] (show_stack+0x18/0x1c)
+[  291.041297]  r7:c326ffb0 r6:600e0113 r5:00000000 r4:c0a3f0e0
+[  291.041308] [<c010c640>] (show_stack) from [<c05eeff8>] (dump_stack+0x88/0x9c)
+[  291.041321] [<c05eef70>] (dump_stack) from [<c0108764>] (show_regs+0x14/0x18)
+[  291.041328]  r7:c326ffb0 r6:c3243984 r5:c326e000 r4:08430000
+[  291.041339] [<c0108750>] (show_regs) from [<c012b5e8>] (get_signal+0x2b0/0x5e8)
+[  291.041349] [<c012b338>] (get_signal) from [<c010ae98>] (do_signal+0xc8/0x454)
+[  291.041358]  r10:b6f0083c r9:c326e000 r8:00000000 r7:10c5387d r6:c326fec8 r5:00000000
+[  291.041362]  r4:c326ffb0
+[  291.041372] [<c010add0>] (do_signal) from [<c010b3e0>] (do_work_pending+0x9c/0xac)
+[  291.041381]  r10:b6f0083c r9:c326e000 r8:00000000 r7:10c5387d r6:c326ffb0 r5:00000000
+[  291.041384]  r4:c326e000
+[  291.041394] [<c010b344>] (do_work_pending) from [<c01079ec>] (slow_work_pending+0xc/0x20)
+[  291.041401]  r7:10c5387d r6:ffffffff r5:600e0030 r4:b1bb34f4

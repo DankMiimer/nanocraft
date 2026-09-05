@@ -485,6 +485,98 @@ static void write_int_setting(const char *file, int v)
     write_text(file, buf);
 }
 
+/* ------------------------------------------------------------- memory probe */
+
+/* How much memory can this console actually give a process?
+ *
+ * Entering a world needs about 65 MB of anonymous memory on hardware with 54-56
+ * MB of RAM, so it depends on compressed swap. This asks the question directly,
+ * without running the game: allocate and TOUCH memory a megabyte at a time
+ * until it fails, and report how far it got.
+ *
+ * Touching matters. Linux overcommits, so an untouched allocation proves
+ * nothing; the pages must be written to be real. That is also why this cannot
+ * be shell - dd into tmpfs measures a different thing, because tmpfs pages are
+ * shared and swap-backed rather than private to a process.
+ *
+ * Deliberately capped and deliberately gentle: it stops at the target, releases
+ * everything immediately, and never pushes the system to the thrashing point an
+ * uncapped test would.
+ */
+static long meminfo_mb(const char *key)
+{
+    char line[256];
+    FILE *f = fopen("/proc/meminfo", "r");
+    size_t n = strlen(key);
+    long v = -1;
+
+    if (!f)
+        return -1;
+    while (fgets(line, sizeof line, f)) {
+        if (strncmp(line, key, n) == 0 && line[n] == ':') {
+            v = strtol(line + n + 1, NULL, 10) / 1024;
+            break;
+        }
+    }
+    fclose(f);
+    return v;
+}
+
+#define PROBE_CHUNK (1024 * 1024)
+
+static int memprobe(int target)
+{
+    unsigned char **blocks;
+    int got = 0, i;
+    long off;
+
+    if (target <= 0)
+        target = 80;
+    printf("  target:    %d MB (a world needs about 65 MB)\n", target);
+    printf("  before:    RAM avail %ld MB, swap free %ld MB\n",
+           meminfo_mb("MemAvailable"), meminfo_mb("SwapFree"));
+    fflush(stdout);
+
+    blocks = calloc((size_t)target, sizeof *blocks);
+    if (!blocks) {
+        printf("  allocated: 0 MB  (stopped: no room for the block table)\n");
+        return 0;
+    }
+    for (i = 0; i < target; i++) {
+        blocks[i] = malloc(PROBE_CHUNK);
+        if (!blocks[i])
+            break;
+        /* Write one byte per page so the kernel has to back it with something
+         * real rather than promising it. */
+        for (off = 0; off < PROBE_CHUNK; off += 4096)
+            blocks[i][off] = 1;
+        got++;
+    }
+
+    printf("  allocated: %d MB%s\n", got,
+           got < target ? "  (stopped: allocation failed)" : "");
+    printf("  during:    RAM avail %ld MB, swap free %ld MB\n",
+           meminfo_mb("MemAvailable"), meminfo_mb("SwapFree"));
+
+    for (i = 0; i < got; i++)
+        free(blocks[i]);
+    free(blocks);
+
+    if (got >= target)
+        printf("  VERDICT:   OK - this console can supply a world's working set\n");
+    else if (got >= 65)
+        printf("  VERDICT:   TIGHT - reached %d MB, enough for a world but with"
+               " little headroom\n", got);
+    else {
+        printf("  VERDICT:   TOO LITTLE - stopped at %d MB, below the ~65 MB a"
+               " world needs.\n", got);
+        printf("             That alone would explain menus working and Play"
+               " failing.\n");
+    }
+    fflush(stdout);
+    return 0;
+}
+
 /* -------------------------------------------------------------------- input */
 
 /* Drop anything already queued, so the press that opened the menu - or a button
@@ -567,8 +659,14 @@ static void draw(const struct assets *a, int page, int sel, int vol, int bri,
     cursor(ROW_TOP[sel] + ROW_H / 2);
 }
 
-int main(void)
+/* The diagnostic build also runs this binary as a memory probe. It lives here
+ * rather than in a second static binary because this one already ships in both
+ * packages, and 380 KB of glibc for one diagnostic is not a good trade. */
+int main(int argc, char **argv)
 {
+    if (argc > 1 && strcmp(argv[1], "--memprobe") == 0)
+        return memprobe(argc > 2 ? atoi(argv[2]) : 80);
+
     struct assets a;
     const char *dev, *env;
     int page = PAGE_MAIN, sel = RESUME;

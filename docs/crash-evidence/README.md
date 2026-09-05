@@ -9,7 +9,6 @@ obvious from the fix.
 |---|---|
 | `memtrace-dmesg.txt` | The kernel's fatal-signal report. `PC is at 0xb1bb34f4`, `LR is at 0xb1bb0df5`, `r1 = 0`, `r3 = 0` — signal 11. |
 | `memtrace-maps.txt` | `/proc/PID/maps` from the **same tick**, which is what makes the PC resolvable at all; addresses move with ASLR. |
-| `memtrace-threads.txt` | Per-thread state, `wchan`, `comm` and `syscall` at the last sample before the process went. |
 | `memtrace.txt` | One line a second: memory, zram occupancy, signal dispositions, process group. |
 | `diag-*.txt` | The diagnostic build's own captures from an earlier run. |
 
@@ -32,8 +31,15 @@ resolves to nothing by default. The chain that worked:
    of locals, so `nm -D`, not `nm`.
 
 That gave `RakNet::RakPeer::Ping(char const*, unsigned short, bool, unsigned
-int) +0x74` on the first try. `research/2026-09-05/resolve-crash.sh` does the
-last step and can be pointed at any future address.
+int) +0x74` on the first try. `opk/resolve-fault.awk` does steps 3 and 4 automatically and is what the
+diagnostic build runs; `research/2026-09-05/resolve-crash.sh` does the final
+symbol lookup and can be pointed at any future address.
+
+Run the resolver against these files to reproduce the finding:
+
+```sh
+awk -v maps=memtrace-maps.txt -f ../../opk/resolve-fault.awk memtrace-dmesg.txt
+```
 
 ## Worth knowing before trusting a trace like this
 
@@ -47,3 +53,9 @@ before reasoning from it.
 The sampler wrote `memtrace.log`; it is `.txt` here because the packaging
 refuses to publish anything named `*.log`, and that guard is worth more than
 the extension.
+
+A note on provenance: these are the captures from the run that crashed. An
+earlier version of this folder held the same filenames from a later,
+crash-free session - they were collected during cleanup, after the tracer had
+already overwritten the ring buffer. If a capture here does not contain
+"potentially unexpected fatal signal", it is the wrong one.

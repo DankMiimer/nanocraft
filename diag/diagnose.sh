@@ -130,7 +130,10 @@ say ""
 sec "7. MEMORY PROBE (no game running)"
 say "Can a process actually obtain a world's working set on this console?"
 say ""
-python3 "$APP_DIR/memprobe.py" 80 >> "$REPORT" 2>&1
+# The probe is a mode of the quick-menu binary, not a script: it has to
+# allocate and touch real pages, which shell cannot honestly do, and the
+# factory firmware has no Python.
+"$APP_DIR/quickmenu" --memprobe 80 >> "$REPORT" 2>&1
 say ""
 
 sec "8. GAME RUN"
@@ -167,7 +170,7 @@ say ""
 
 sec "9. CRASH ATTRIBUTION"
 dmesg > "$DATA/diag-dmesg.txt" 2>/dev/null
-python3 "$APP_DIR/resolve-fault.py" "$DATA/diag-dmesg.txt" "$DATA/diag-maps.txt" >> "$REPORT" 2>&1
+awk -v maps="$DATA/diag-maps.txt" -f "$APP_DIR/resolve-fault.awk" \n    "$DATA/diag-dmesg.txt" >> "$REPORT" 2>&1
 say ""
 say "\$ kernel messages (tail)"
 tail -30 "$DATA/diag-dmesg.txt" >> "$REPORT" 2>&1

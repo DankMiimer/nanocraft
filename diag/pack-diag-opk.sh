@@ -30,7 +30,8 @@ GAME_DATA="minecraft.key menubg.raw videobg.raw res240.raw res120.raw
 GAME_PY=""
 GAME_BIN="nano-clk quickmenu"
 DIAG_SCRIPTS="diagnose.sh"
-DIAG_PY="resolve-fault.py memprobe.py"
+DIAG_PY=""
+DIAG_AWK="resolve-fault.awk"
 DIAG_DATA="diagbg.raw"
 
 # The game half sits beside this script in the working tree and one directory
@@ -43,7 +44,7 @@ rm -rf "$STAGE"; mkdir -p "$STAGE"
 for f in $GAME_SCRIPTS $GAME_PY $GAME_DATA $GAME_BIN; do
   cp "$GAME_SRC/$f" "$STAGE/"
 done
-for f in $DIAG_SCRIPTS $DIAG_PY $DIAG_DATA; do
+for f in $DIAG_SCRIPTS $DIAG_PY $DIAG_AWK $DIAG_DATA; do
   cp "$SRC/$f" "$STAGE/"
 done
 

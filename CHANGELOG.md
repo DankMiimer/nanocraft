@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.0.10
+
+**The diagnostic build no longer needs an interpreter either.**
+
+v1.0.7 moved the quick menu off Python because DrUm78's factory firmware ships
+none. Two pieces of the diagnostic build were left behind and quietly did
+nothing on exactly the consoles that need diagnosing — its memory probe and its
+crash-address resolver. Both are converted.
+
+**`resolve-fault.py` is now `resolve-fault.awk`.** It is pure text processing —
+parse the kernel's fault dump, parse `/proc/PID/maps`, resolve the program
+counter — which is what awk is for, and BusyBox has awk. It still knows the
+thing that matters on this port: `libminecraftpe.so` never appears as a file in
+the map, because Ninecraft's Android linker maps it by hand, so a fault in the
+game lands in the largest anonymous executable region and is reported as such.
+
+Verified against the actual capture from the v1.0.7 crash, where it reproduces
+the original analysis exactly:
+
+```text
+  Fatal signal: SIGSEGV (11)
+  PC  0xb1bb34f4  ->  anonymous+0x1ca4f4  [r-xp, 2608 kB region]
+                      <-- very likely libminecraftpe.so (the game)
+```
+
+**`memprobe.py` is now `quickmenu --memprobe`.** This one could not become a
+shell script honestly: it has to allocate memory *and touch every page*, because
+Linux overcommits and an untouched allocation proves nothing. `dd` into tmpfs
+measures a different thing — those pages are shared and swap-backed rather than
+private to a process. So it is C, folded into the quick-menu binary rather than
+shipped as a second 380 KB static executable for one diagnostic.
+
+Nothing in either package now references `python3`.
+
 ## v1.0.9
 
 **If NanoCraft will not start on your kernel, it now collects the fix for you.**

@@ -182,38 +182,52 @@ ruling this out in one line is worth the second it costs.)
 
 Measured on an RG Nano, which is the same hardware class:
 
-| | Resident | Swapped | Total anonymous |
+| | Resident | Held compressed | Total anonymous |
 | --- | ---: | ---: | ---: |
 | Title screen | 37 MB | 5 MB | 42 MB |
-| **In a world** | 40 MB | 28 MB | **68 MB** |
+| **In a world** | 28 MB | 37 MB | **65 MB** |
 
 The console has **56 MB of RAM**, of which roughly 41 MB is available to the
-game. So **entering a world needs about 27 MB more than RAM alone can provide**,
-on any console of this class. The RG Nano's stock image happens to include a
-128 MB swap partition, and earlier versions of NanoCraft simply assumed it.
+game. So **entering a world needs about 10 MB more anonymous memory than this
+hardware physically has**, on any console of this class.
 
-Menus fit in RAM; a world does not. A console short of swap therefore shows
-every menu perfectly and dies the moment terrain loads — which is exactly the
-reported symptom.
+Menus fit; a world does not. A console that cannot find that extra headroom
+therefore shows every menu perfectly and dies the moment terrain loads — which
+is exactly the reported symptom.
 
-**Since v1.0.1 NanoCraft checks, and provides swap when the system is short**
-(`opk/ensure-swap.sh`). On a console with adequate swap it reads
-`/proc/meminfo`, logs three numbers and does nothing. `/mnt` is vfat and Linux
-will not swap to a file on vfat, so it loops the file through a block device —
-and it has to find a free one, because the running OPK is itself a loop-mounted
-squashfs occupying `/dev/loop0`.
+**Since v1.0.6 NanoCraft makes that headroom itself, in RAM.** It loads zram, a
+compressed block device the kernel can move idle pages into, and lets LZ4 do
+the rest: measured on this game the ratio is **2.7:1**, with around 1,500
+identical pages deduplicated outright, so 40 MB of idle pages occupy about
+14 MB. Nothing is written to your card at any point. Details in
+[docs/PORTING.md](docs/PORTING.md).
 
 **Honesty about what this does not prove.** I could not reproduce the tester's
-`rc=139` on my own hardware. Taking swap away from an RG Nano makes it *wedge*
-under memory pressure rather than segfault — a different failure. So the memory
-arithmetic above is solid and the guard is worth having regardless, but whether
-it is *their* bug is unconfirmed. Every launch now logs
+`rc=139` on my own hardware, and the memory arithmetic above being solid does
+not make it *their* bug. What v1.0.6 changes is that the headroom now exists on
+any console where the modules load, so if memory was the cause, it should be
+gone. Every launch logs what happened:
 
 ```text
-[mem] RAM 55 MB total, 36 MB available; swap 127 MB
+[mem] RAM 55 MB total, 41 MB available
+[mem] zram: 80 MB logical, lz4, 24 MB RAM ceiling
 ```
 
 so the next report will contain the answer whether or not anyone thinks to ask.
+
+**The one thing that may not travel is the modules.** The RG Nano's kernel has
+no zram, so NanoCraft ships its own — and a kernel module is built for one
+specific kernel and refuses to load on any other. Mine were built for, and
+tested on, **my** console. If yours is a different build they will not load, and
+NanoCraft will say so and refuse to start rather than run without the memory it
+needs. That is a worse outcome than v1.0.5 gave you, and it is the thing most
+worth reporting.
+
+Rebuilding them needs no firmware change and no special hardware — the
+configuration, the exact build commands and the audit step are all in
+[`opk/modules/README.md`](opk/modules/README.md). If they do not load on your
+console, please open an issue with the `[mem]` line and `uname -a`; that is
+enough for me to build a set that does.
 
 Everything else about a FunKey S looks compatible — same FunKey-OS, same
 `fkgpiod`, same 240x240 panel, same Allwinner V3s family, and this package is

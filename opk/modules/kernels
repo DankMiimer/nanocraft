@@ -1,0 +1,28 @@
+# Kernels these modules are known to be correct for.
+#
+# One build identity per line, exactly as the console reports it:
+#
+#     uname -r + " " + uname -v
+#
+# WHY THIS FILE EXISTS. The module loader compares a "vermagic" string, and
+# vermagic carries only the kernel version, SMP, preemption, module-unload
+# support and the architecture. It says nothing about the rest of the
+# configuration. Two different builds of 4.14.14-funkey can therefore share a
+# vermagic exactly while disagreeing about the layout of struct page, of a
+# spinlock, or of the mm internals that zram and zsmalloc reach into. insmod
+# would accept such a module and the result would be memory corruption rather
+# than a clean refusal - the one failure the loader cannot protect anyone from.
+#
+# So the launcher refuses to load anything into a kernel that is not named here.
+# It is a whitelist of builds somebody has actually verified, not a guess.
+#
+# ADDING YOURS. Send `uname -a`, `/proc/version` and a copy of `/boot/zImage`.
+# The zImage is what matters: the kernel's export table can be recovered from it
+# and audited against every symbol these modules import, before anything is
+# loaded on your hardware. Rebuilding them needs no firmware change. See
+# README.md in this directory.
+#
+# Note this is deliberately not /proc/version verbatim: that line carries the
+# username and hostname of whoever built the kernel, which is nobody's business.
+
+4.14.14-funkey #1 Thu Jun 18 07:57:19 CEST 2026

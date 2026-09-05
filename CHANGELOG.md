@@ -2,31 +2,31 @@
 
 ## v1.0.6
 
-**The game no longer swaps to your SD card.**
+**The game no longer writes to your SD card to make room for itself.**
 
 Entering a world needs about 65 MB of anonymous memory on a console with 56 MB
-of RAM, and every release until now closed that gap by paging to the card — the
-stock 128 MB swap partition, or a 128 MB file the launcher created. It worked,
+of RAM, and every release until now found the difference on the card. It worked,
 and it charged the card's finite flash endurance for every world load, forever.
 
-That gap is now closed **in RAM**. The launcher loads zram, a compressed block
-device the kernel can evict pages into, with LZ4. Measured on this game's heap
-the ratio is **2.7:1**, with around 1,500 identical pages deduplicated outright,
-so 40 MB of evicted pages occupy about 14 MB of RAM. The card is switched out of
-the paging path entirely while the game runs and put back when you quit.
+That difference is now found **in RAM**. The launcher loads zram, a compressed
+block device the kernel can move idle pages into, with LZ4. Measured on this
+game's heap the ratio is **2.7:1**, with around 1,500 identical pages
+deduplicated outright, so 40 MB of idle pages occupy about 14 MB. Your card is
+not touched at any point while the game runs, and the console is left exactly as
+it was found when you quit.
 
-Measured across two independent sessions, a cold launch and a world entry:
+Measured across three sessions including a cold launch and a world entry:
 
 | | |
 |---|---:|
 | Anonymous memory in a world | 65.4 MB |
-| Held by zram | 14.4 MB peak |
+| Held compressed | 14.4 MB peak |
 | MemAvailable at world entry | 3.9 MB, then 17 MB |
 
 That floor is thin and worth knowing about: this port now lives inside a ~4 MB
 budget at its worst instant, and a heavier world or a firmware change costing a
-few megabytes could turn that dip into a kill. It reproduced twice, but on one
-save.
+few megabytes could turn that dip into a kill. It reproduced three times, but on
+one save.
 
 **The stock kernel has no zram**, so the package carries four modules (97 KB)
 built from unmodified Linux 4.14.14 configured to match DrUm78's RG Nano kernel.
@@ -34,17 +34,23 @@ They are loaded at launch and unloaded by a reboot; nothing is written to the
 read-only rootfs and there is no firmware to flash. Source, configuration and
 build instructions are in `opk/modules/README.md`.
 
-**It fails closed, with no way back.** If the modules will not load — a firmware
-update being the likely reason — the launcher says so and refuses to start.
-There is deliberately no option to fall back to the card: paging to flash is
-what this release removed, and shipping a documented way to re-enable it would
-be shipping it. The modules are ordinary out-of-tree kernel modules; rebuilding
-them for another kernel is documented and needs no firmware change.
+**A kernel module is built for one kernel**, and these were built for and tested
+on one console. NanoCraft checks that before loading anything, and it checks
+more strictly than the kernel does: Linux compares a short "vermagic" string
+covering the version and a few build options and nothing else, so two
+differently configured builds of the same kernel pass it — and loading into the
+wrong one corrupts memory rather than failing cleanly. `opk/modules/kernels`
+lists the builds somebody has actually verified, and nothing is loaded into a
+kernel that is not on it.
 
-Upgrading deletes the old `nanocraft.swap` file and gives you the 128 MB back.
+If yours is not on the list NanoCraft says so and refuses to start rather than
+running without the memory it needs — a game whose menus all work and which dies
+the instant terrain loads is a far more confusing thing to be handed. Send
+`uname -a` and a copy of `/boot/zImage` and a verified set can be built for your
+console; it needs no firmware change.
 
-`ensure-swap.sh` is now `ensure-memory.sh`, because providing swap was never the
-point; providing memory was.
+`ensure-swap.sh` is now `ensure-memory.sh`, because providing memory was always
+the point.
 
 ## v1.0.5
 

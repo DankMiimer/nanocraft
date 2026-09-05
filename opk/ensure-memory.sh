@@ -45,16 +45,46 @@ DISK_MB=80
 # unusually incompressible or leaking session from eating the RAM the game needs
 # for itself. In normal play it is never approached.
 MEM_LIMIT_MB=24
+UNKNOWN_KERNEL=0
 
 kb() { awk -v k="$1" '$1 == k":" { print $2 }' /proc/meminfo; }
 mb() { echo $(( $(kb "$1") / 1024 )); }
 
-echo "[mem] RAM $(mb MemTotal) MB total, $(mb MemAvailable) MB available; swap $(mb SwapTotal) MB"
+echo "[mem] RAM $(mb MemTotal) MB total, $(mb MemAvailable) MB available"
+
+# --- is this a kernel these modules are correct for? --------------------------
+# vermagic is not enough. It encodes the version, SMP, preemption, module-unload
+# and the architecture, and nothing else - so two builds of 4.14.14-funkey with
+# different configurations share it exactly while disagreeing about the layout
+# of struct page and the mm internals zram reaches into. insmod would accept
+# that and corrupt memory rather than refuse. modules/kernels is the whitelist
+# of builds somebody has actually verified; anything else is not loaded at all.
+KERNEL_IDENT="$(uname -r) $(uname -v)"
+
+kernel_known() {
+  [ -f "$MODDIR/kernels" ] || return 1
+  CR=$(printf '\r')
+  while IFS= read -r line; do
+    # Tolerate a CRLF copy. .gitattributes pins this file to LF, but a list
+    # that silently matched nothing would look exactly like an unsupported
+    # console, which is the worst way for this to fail.
+    line=${line%"$CR"}
+    case "$line" in ''|'#'*) continue ;; esac
+    [ "$line" = "$KERNEL_IDENT" ] && return 0
+  done < "$MODDIR/kernels"
+  return 1
+}
 
 # --- modules ------------------------------------------------------------------
 # Order matters: zram stores pages through zsmalloc and compresses them through
 # the crypto API's lz4 shim, which needs the two algorithm modules under it.
 load_modules() {
+  # Nothing to check if the kernel already provides zram: the whitelist governs
+  # what gets loaded, not what is already there.
+  if ! grep -q '^zram ' /proc/modules && ! kernel_known; then
+    UNKNOWN_KERNEL=1
+    return 1
+  fi
   for m in lz4_compress lz4_decompress lz4 zsmalloc zram; do
     grep -q "^$m " /proc/modules && continue
     if [ ! -f "$MODDIR/$m.ko" ]; then
@@ -74,7 +104,7 @@ load_modules() {
 # --- the compressed device ----------------------------------------------------
 setup_zram() {
   if grep -q '^/dev/zram0 ' /proc/swaps; then
-    echo "[mem] zram already active, leaving it alone"
+    echo "[mem] compressed memory already active, leaving it alone"
     return 0
   fi
   # Clears anything a previous run left half-configured. Refused while the
@@ -103,9 +133,9 @@ disable_disk_swap() {
   [ -n "$scan" ] && echo "$scan" > "$DATA/.disk-swap"
   for dev in $scan; do
     if swapoff "$dev" 2>/dev/null; then
-      echo "[mem] disabled disk swap $dev"
+      echo "[mem] took $dev out of the paging path"
     else
-      echo "[mem] WARNING: could not disable $dev - the card is still in the paging path"
+      echo "[mem] WARNING: could not release $dev - the card is still in the paging path"
     fi
   done
 }
@@ -117,17 +147,17 @@ disable_disk_swap() {
 drop_legacy_swapfile() {
   [ -f "$DATA/nanocraft.swap" ] || return 0
   if losetup -a 2>/dev/null | grep -q "$DATA/nanocraft.swap"; then
-    echo "[mem] legacy swap file is still attached, leaving it"
+    echo "[mem] the old paging file is still attached, leaving it"
     return 0
   fi
   rm -f "$DATA/nanocraft.swap" "$DATA/.swap-loop"
-  echo "[mem] removed the old 128 MB swap file from the card"
+  echo "[mem] removed the old 128 MB paging file from the card"
 }
 
 if load_modules && setup_zram; then
   disable_disk_swap
   drop_legacy_swapfile
-  echo "[mem] swap now $(mb SwapTotal) MB, RAM-backed only"
+  echo "[mem] compressed memory ready, $(mb SwapTotal) MB"
   exit 0
 fi
 
@@ -137,8 +167,27 @@ fi
 # shipping a documented way back into it would be shipping it. If these modules
 # will not load, the answer is to build ones that do, not to spend somebody's
 # flash endurance quietly.
+if [ "$UNKNOWN_KERNEL" = 1 ]; then
+  {
+    echo "[mem] this kernel is not one the bundled modules were built for:"
+    echo "[mem]     $KERNEL_IDENT"
+    echo "[mem]"
+    echo "[mem] They are only loaded into kernels somebody has verified, because"
+    echo "[mem] the loader's own check cannot tell two differently configured"
+    echo "[mem] builds apart and loading into the wrong one corrupts memory"
+    echo "[mem] rather than failing cleanly."
+    echo "[mem]"
+    echo "[mem] NanoCraft will not start without them: a world needs about 65 MB"
+    echo "[mem] of anonymous memory and this console has $(mb MemTotal) MB of RAM."
+    echo "[mem] Please report the line above with 'uname -a' and a copy of"
+    echo "[mem] /boot/zImage, and a set for your console can be built and"
+    echo "[mem] audited. It needs no firmware change. See modules/README.md."
+  } >&2
+  exit 1
+fi
+
 {
-  echo "[mem] could not set up RAM-only swap on kernel $(uname -r)."
+  echo "[mem] could not set up compressed memory on kernel $(uname -r)."
   echo "[mem] The modules in modules/ are built for one specific kernel and"
   echo "[mem] refuse to load on any other, so a firmware update or a different"
   echo "[mem] console is the usual cause."

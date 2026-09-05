@@ -84,7 +84,7 @@ fi
 # launch rather than quietly paging to flash - there is no fallback to the card,
 # by design. The measurements and the sizing live in that script.
 if ! sh "$APP_DIR/ensure-memory.sh" "$DATA" >> "$LOG" 2>&1; then
-  echo "[opk] could not arrange RAM-only swap - see $LOG" >> "$LOG"
+  echo "[opk] could not set up compressed memory - see $LOG" >> "$LOG"
   exit 1
 fi
 

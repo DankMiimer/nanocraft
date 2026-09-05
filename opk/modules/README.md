@@ -42,9 +42,21 @@ That is DrUm78's RG Nano kernel: uniprocessor, no preemption, no MODVERSIONS.
 A module built for any other configuration is refused, which is the safe
 outcome — `ensure-memory.sh` reports it and stops rather than guessing.
 
-Matching vermagic is necessary but not sufficient, because it says nothing about
-whether the symbols a module needs are actually exported. That was checked
-separately: `audit-modules.py` in the research notes recovers the running
+**Matching vermagic is not sufficient, and this is the important part.** It
+encodes the version, SMP, preemption, module-unload support and the
+architecture, and nothing else. Two builds of `4.14.14-funkey` with different
+configurations share it exactly while disagreeing about the layout of
+`struct page`, of a spinlock, or of the mm internals zram and zsmalloc reach
+into. `insmod` accepts such a module, and the result is memory corruption rather
+than a clean refusal.
+
+So the launcher does not rely on vermagic alone. `kernels` in this directory
+lists the build identities — `uname -r` plus `uname -v` — that somebody has
+actually verified, and nothing is loaded into a kernel that is not on that list.
+Adding one is deliberate, not automatic.
+
+Vermagic also says nothing about whether the symbols a module needs are
+actually exported. That was checked separately: `audit-modules.py` in the research notes recovers the running
 kernel's export table straight out of `/boot/zImage` and confirms every
 undefined symbol in all five modules resolves against it. **Re-run that audit
 before shipping a rebuild.** A missing export is a load-time failure; a
@@ -56,4 +68,5 @@ that one.
 Expected, and handled: `insmod` fails, the launcher says so and refuses to
 start. There is no fallback to SD paging — that is the behaviour the modules
 exist to remove — so the fix is to rebuild them against the new kernel with the
-configuration above and re-run the export audit. It needs no firmware change.
+configuration above, re-run the export audit, and add the new build identity to
+`kernels`. It needs no firmware change.

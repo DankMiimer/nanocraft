@@ -14,6 +14,11 @@ Dockerfile* text eol=lf
 .dockerignore text eol=lf
 *.ps1   text eol=crlf
 
+# The list of verified kernel builds is compared to `uname` output character
+# for character on the console. A CRLF copy matches nothing, and the symptom
+# would be NanoCraft refusing to start on the very console it was built for.
+opk/modules/kernels text eol=lf
+
 # The kernel configuration the zram modules are built from. A CRLF copy is not
 # a valid input to `make olddefconfig`, so it has to survive a Windows clone
 # intact for the modules to be rebuildable at all.

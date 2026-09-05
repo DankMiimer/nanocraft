@@ -83,7 +83,7 @@ done
 # a world loading off the SD card. kernel.config and README.md travel with them
 # because they are GPLv2 kernel code and the build has to stay reproducible.
 mkdir -p "$STAGE/modules"
-for f in $PAYLOAD_MODULES kernel.config README.md; do
+for f in $PAYLOAD_MODULES kernels kernel.config README.md; do
   if [ ! -f "$SRC/modules/$f" ]; then
     echo "ERROR: modules/$f is missing."
     echo "       See modules/README.md for how these are built."

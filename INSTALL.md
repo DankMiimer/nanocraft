@@ -133,44 +133,56 @@ Those are the tested values, and both 0.8.1 APKs in the widely mirrored
 archive.org set match them exactly. So if your hash matches, **the APK is not
 your problem** and this is not the answer.
 
-**Then check memory.** In a world this port uses about 28 MB resident and
-**37 MB swapped** — roughly 10 MB more anonymous memory than this hardware
-physically has. Menus fit; a world does not.
+**Then check memory.** In a world this port needs about **65 MB of anonymous
+memory** on a console with 56 MB of RAM. Menus fit; a world does not.
 
-The launcher handles this itself, and since v1.0.6 it does so **entirely in
-RAM**: it loads zram, a compressed block device, and lets the kernel keep
-evicted pages there under LZ4 instead of writing them to your card. Measured
-compression on this game is 2.7:1, so 40 MB of evicted pages cost about 14 MB.
-Every run logs what happened to `run.log`:
+The launcher makes up the difference itself, in RAM. It loads zram — a
+compressed block device the kernel can move idle pages into — and lets LZ4 hold
+them at about 2.7:1, so roughly 40 MB of idle pages cost about 14 MB. **Nothing
+is written to your SD card at any point.** Every run logs what happened to
+`run.log`:
 
 ```text
-[mem] RAM 55 MB total, 41 MB available; swap 0 MB
+[mem] RAM 55 MB total, 41 MB available
 [mem] zram: 80 MB logical, lz4, 24 MB RAM ceiling
-[mem] disabled disk swap /dev/mmcblk0p3
-[mem] swap now 79 MB, RAM-backed only
+[mem] took /dev/mmcblk0p3 out of the paging path
+[mem] compressed memory ready, 79 MB
 ```
 
-Your SD card is switched **out** of the paging path for as long as the game is
-running, and put back when you quit. Nothing is written to it, and no swap file
-is created anywhere. If you are upgrading, the old 128 MB `nanocraft.swap` is
-deleted on first launch and you get the space back.
+That third line is NanoCraft taking your console's own disk-backed paging out of
+the picture for as long as the game runs, which is the whole reason none of this
+reaches your card. It is put back exactly as it was found when you quit, and a
+reboot would restore it anyway.
 
-If the modules will not load — a firmware update is the usual reason — the
-launcher says so and **refuses to start**:
+The RG Nano's kernel has no zram of its own, so the package carries its own
+modules — and a kernel module is built for one specific kernel. If yours is not
+one they have been verified against, NanoCraft says so and will not start:
 
 ```text
-[mem] could not set up RAM-only swap on kernel 4.14.14-funkey.
-[mem] Entering a world needs about 65 MB of anonymous memory and this
-[mem] console has 56 MB of RAM, so NanoCraft will not start without
-[mem] them. Rebuilding them for your kernel is documented in
-[mem] modules/README.md; it needs no firmware change.
+[mem] this kernel is not one the bundled modules were built for:
+[mem]     4.14.14-funkey #1 Thu Jun 18 07:57:19 CEST 2026
+[mem]
+[mem] Please report the line above with 'uname -a' and a copy of
+[mem] /boot/zImage, and a set for your console can be built and
+[mem] audited. It needs no firmware change.
 ```
 
-There is no fallback to the SD card, deliberately: paging to flash is the
-behaviour this release removed, and offering a way back into it would be
-shipping it. The modules are ordinary out-of-tree kernel modules and rebuilding
-them for a different kernel is documented in `opk/modules/README.md`. It needs
-no firmware change.
+**This is stricter than the kernel's own check on purpose.** Linux compares a
+short "vermagic" string that covers the version and a handful of build options
+and nothing else, so two differently configured builds of the same kernel pass
+it — and loading a module into the wrong one corrupts memory instead of failing
+cleanly. NanoCraft therefore only loads into builds someone has actually
+verified, listed in `opk/modules/kernels`.
+
+It refuses rather than running without the memory it needs, because the failure
+that would otherwise follow — every menu working and the game dying the moment
+terrain loads — is a far more confusing thing to debug.
+
+**If that happens to you, please open an issue** with that `[mem]` line, the
+output of `uname -a`, and `/boot/zImage` from your console. The kernel's export
+table can be recovered from the zImage and audited against every symbol these
+modules need *before* anything is loaded on your hardware, so getting you a
+working set is a small job. It needs no firmware change.
 
 **Please include those `[mem]` lines in any report** — they are the single most
 useful thing you can send.

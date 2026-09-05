@@ -1,5 +1,57 @@
 # Changelog
 
+## v1.0.11 — the interface at the screen's real resolution
+
+- Render the world at 120x120 and the interface at the panel's real 240x240.
+  Only `GameRenderer::renderLevel` is redirected into a smaller buffer; the HUD
+  and menus the game draws afterwards land on the full-resolution window, so
+  text and item icons stop being 2x2 blocks while the world costs what it did.
+  On by default at 120x120 only; `NINECRAFT_NATIVE_UI=0` restores the old path,
+  and the build falls back to it by itself on any unverified renderer.
+- Add `tests/native_ui_gl_test.c` and `tests/run-native-ui-gl-test.sh`, which
+  run that compositor against a real software OpenGL driver in Docker.
+- Remove the upper-right chat button in-world. It opens a keyboard this console
+  does not have, and 0.8.1 reaches its renderer only through one vtable slot, so
+  the slot is blanked; the click path was already replaced by keyboard movement.
+  Chat messages still appear. `NINECRAFT_CHAT_BUTTON=1` puts the button back.
+- Add `tests/chat_button_vtable_check.py`, which re-checks against a real
+  library that the replaced slot is the renderer and that it draws the chat
+  sprite.
+- Add independent CAMERA and CURSOR sliders to Quick Settings. Defaults are
+  100% and 20%; both persist and apply on resume. Cursor speed accounts for the
+  render resolution; camera retains the existing speed at 100%.
+- Preserve fractional cursor movement at low speeds and discard accumulated
+  movement after a long pause or a change between camera and cursor mode.
+- Rename the quick menu's VIDEO entry to SETTINGS and fit all seven settings
+  rows on the native 240x240 menu framebuffer.
+- Add native input/configuration tests and a test that drives the actual menu
+  event loop and captures its framebuffer. Cross-compile both ARM binaries.
+- Ship the sensitivity strips in `NanoCraftDiag_funkey-s.opk` as well. Its file
+  list had never been given them, so the diagnostic build's SETTINGS page was
+  missing what the shipping build's has - which defeats the point of a
+  diagnostic build whose game half is meant to be byte-identical.
+- Record the older runtime found in the local v1.0.10 archive and test card.
+  The new test runtime includes the existing GUI-scale/FOV patches; this also
+  means FIT and FOV may visibly change when upgrading.
+- Close out the screen-layout work planned in
+  [UI-120-PLAN.md](docs/UI-120-PLAN.md) without implementing it. The pause and
+  options screens were photographed overflowing on the runtime that was missing
+  the hotbar-fit patch; with a runtime that has it, and the interface at its
+  real 240x240, they lay out correctly on the console.
+
+Everything above was confirmed on the console before release: the sliders, the
+native interface, the removed chat button and the menus. Host tests and
+packaging checks pass.
+
+**The v1.0.10 payload is corrected here.** That release's `ninecraft` predated
+the GUI-scale and FOV patches its own launcher asked for, because the archive
+script rebuilt the OPK on every run and reused whatever payload was lying beside
+it — and the game is in the payload. `release/build-payload.sh` now rebuilds it,
+and `release/build-archive.sh` refuses to zip a release whose packaged runtime
+does not implement every `NINECRAFT_` setting its packaged launcher exports.
+
+Not fixed: the tester kernel-compatibility issue, which is unrelated and open.
+
 ## v1.0.10
 
 **The diagnostic build no longer needs an interpreter either.**

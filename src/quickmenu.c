@@ -49,6 +49,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <ninecraft/input/sensitivity.h>
 
 #define W 240
 #define H 240
@@ -65,9 +66,9 @@ enum { K_UP = 103, K_DOWN = 108, K_LEFT = 105, K_RIGHT = 106, K_A = 57, K_B = 29
  * lost. Quitting through the game's own pause menu (L+START) saves first. */
 enum { VOLUME, BRIGHT, CPU, VIDEO, RESTART, CLOSE, SHUTDOWN, RESUME };
 /* The video page, reached from the VIDEO row. */
-enum { V_SCREEN, V_GUISCALE, V_FOV, V_CAP, V_BACK };
+enum { V_SCREEN, V_GUISCALE, V_FOV, V_CAP, V_CAMERA, V_CURSOR, V_BACK };
 enum { PAGE_MAIN, PAGE_VIDEO };
-static const int PAGE_ROWS[2] = { 8, 5 };
+static const int PAGE_ROWS[2] = { 8, 7 };
 
 static const int ROW_TOP[8] = { 34, 58, 82, 106, 130, 154, 178, 202 };
 #define ROW_H 22
@@ -485,6 +486,23 @@ static void write_int_setting(const char *file, int v)
     write_text(file, buf);
 }
 
+static int write_sensitivity(nc_sensitivity value)
+{
+    char path[PATH_MAX], temp[PATH_MAX];
+    setting_path(path, sizeof path, "sensitivity.txt");
+    setting_path(temp, sizeof temp, "sensitivity.txt.tmp");
+    mkdir(datadir, 0755);
+    FILE *file = fopen(temp, "w");
+    if (!file) return -1;
+    int ok = fprintf(file, "%d %d\n", value.camera, value.cursor) > 0;
+    if (fclose(file) != 0) ok = 0;
+    if (!ok || rename(temp, path) != 0) {
+        unlink(temp);
+        return -1;
+    }
+    return 0;
+}
+
 /* ------------------------------------------------------------- memory probe */
 
 /* How much memory can this console actually give a process?
@@ -601,6 +619,7 @@ struct assets {
     unsigned char *gs[3];
     unsigned char *fov[6];
     unsigned char *cap[N_CAPS];
+    unsigned char *sensitivity[NC_SENS_COUNT];
 };
 
 static void load_assets(struct assets *a)
@@ -610,6 +629,10 @@ static void load_assets(struct assets *a)
 
     a->bg[0] = load_raw("menubg.raw", FBSIZE);
     a->bg[1] = load_raw("videobg.raw", FBSIZE);
+    for (i = 0; i < NC_SENS_COUNT; i++) {
+        snprintf(name, sizeof name, "sens%d.raw", NC_SENS_MIN + i * NC_SENS_STEP);
+        a->sensitivity[i] = load_raw(name, STRIP_BYTES);
+    }
     for (i = 0; i < 2; i++) {
         snprintf(name, sizeof name, "res%d.raw", SIZES[i]);
         a->val[i] = load_raw(name, STRIP_BYTES);
@@ -637,7 +660,8 @@ static void load_assets(struct assets *a)
  * background is a single memcpy and the panel's SPI flush is driven by the
  * driver's deferred IO rather than by us. */
 static void draw(const struct assets *a, int page, int sel, int vol, int bri,
-                 int clock_mhz, int size_i, int gs_i, int fov_i, int cap_i)
+                 int clock_mhz, int size_i, int gs_i, int fov_i, int cap_i,
+                 nc_sensitivity sensitivity)
 {
     int vy = (ROW_H - VAL_H) / 2;
 
@@ -655,6 +679,17 @@ static void draw(const struct assets *a, int page, int sel, int vol, int bri,
         blit(a->gs[gs_i], VAL_X, ROW_TOP[V_GUISCALE] + vy, VAL_W, VAL_H);
         blit(a->fov[fov_i], VAL_X, ROW_TOP[V_FOV] + vy, VAL_W, VAL_H);
         blit(a->cap[cap_i], VAL_X, ROW_TOP[V_CAP] + vy, VAL_W, VAL_H);
+        int values[2] = { sensitivity.camera, sensitivity.cursor };
+        for (int i = 0; i < 2; i++) {
+            int row = V_CAMERA + i;
+            int index = (values[i] - NC_SENS_MIN) / NC_SENS_STEP;
+            blit(a->sensitivity[index], VAL_X, ROW_TOP[row] + vy, VAL_W, VAL_H);
+            int y = ROW_TOP[row] + ROW_H - 3;
+            int fill = (VAL_W - 3) * index / (NC_SENS_COUNT - 1);
+            rect(VAL_X, y, VAL_W, 2, C_BAR_BG);
+            rect(VAL_X, y, fill + 3, 2, C_BAR_FG);
+            rect(VAL_X + fill, y - 1, 3, 4, C_CURSOR);
+        }
     }
     cursor(ROW_TOP[sel] + ROW_H / 2);
 }
@@ -672,6 +707,7 @@ int main(int argc, char **argv)
     int page = PAGE_MAIN, sel = RESUME;
     int vol, bri, clock_mhz;
     int size_i, gs_i, fov_i, cap_i;
+    nc_sensitivity sensitivity;
     int fd, grabbed = 0, action = 0, running = 1;
 
     C_CURSOR = rgb(120, 220, 120);
@@ -694,6 +730,11 @@ int main(int argc, char **argv)
     }
     env = getenv("MCPE_DATA");
     snprintf(datadir, sizeof datadir, "%s", env ? env : "/mnt/FunKey/nanocraft");
+    {
+        char path[PATH_MAX];
+        setting_path(path, sizeof path, "sensitivity.txt");
+        sensitivity = nc_sensitivity_read(path);
+    }
 
     vol = get_pct("volume");
     bri = get_pct("brightness");
@@ -732,7 +773,7 @@ int main(int argc, char **argv)
     }
     drain(fd);
 
-    draw(&a, page, sel, vol, bri, clock_mhz, size_i, gs_i, fov_i, cap_i);
+    draw(&a, page, sel, vol, bri, clock_mhz, size_i, gs_i, fov_i, cap_i, sensitivity);
 
     while (running) {
         struct pollfd p = { fd, POLLIN, 0 };
@@ -785,6 +826,15 @@ int main(int argc, char **argv)
                         if (fov_i < 0) fov_i = 0;
                         if (fov_i > 5) fov_i = 5;
                         write_int_setting("fov.txt", FOVS[fov_i]);
+                        dirty = 1;
+                    } else if (sel == V_CAMERA || sel == V_CURSOR) {
+                        nc_sensitivity next = sensitivity;
+                        int *value = sel == V_CAMERA ? &next.camera : &next.cursor;
+                        *value += dir * NC_SENS_STEP;
+                        if (*value < NC_SENS_MIN) *value = NC_SENS_MIN;
+                        if (*value > NC_SENS_MAX) *value = NC_SENS_MAX;
+                        if (write_sensitivity(next) == 0) sensitivity = next;
+                        else fprintf(stderr, "[quickmenu] could not save sensitivity\n");
                         dirty = 1;
                     } else if (sel == V_CAP) {
                         cap_i += dir;              /* same clamped ladder */
@@ -853,7 +903,7 @@ int main(int argc, char **argv)
             }
         }
         if (running && dirty)
-            draw(&a, page, sel, vol, bri, clock_mhz, size_i, gs_i, fov_i, cap_i);
+            draw(&a, page, sel, vol, bri, clock_mhz, size_i, gs_i, fov_i, cap_i, sensitivity);
     }
 
     if (grabbed)

@@ -28,6 +28,11 @@ GAME_DATA="minecraft.key menubg.raw videobg.raw res240.raw res120.raw
            capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw cap20.raw cap25.raw cap30.raw
            cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
 GAME_PY=""
+# The 20 sensitivity strips belong to the same quick menu binary as the rest.
+# Listing them separately, the way pack-pe-opk.sh does, keeps the two lists
+# visibly the same shape - a strip missing from only this one would give the
+# diagnostic build a SETTINGS page the shipping build does not have.
+for s in $(seq 10 10 200); do GAME_DATA="$GAME_DATA sens$s.raw"; done
 GAME_BIN="nano-clk quickmenu"
 DIAG_SCRIPTS="diagnose.sh"
 DIAG_PY=""

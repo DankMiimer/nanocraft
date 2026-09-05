@@ -37,6 +37,13 @@ worth having on a console like this.
 
 ## What performance to honestly expect
 
+**Release audit, September 2026:** the v1.0.10 release archive shipped an older
+runtime without the GUI-scale and FOV patches described below, so selecting FIT
+could not fix anything — the binary had no code behind the setting. That is
+corrected in the current build, and the packaging guard that would have caught
+it now runs on every package. See the
+[120x120 UI plan](docs/UI-120-PLAN.md) for the evidence and what followed.
+
 The RG Nano has **no GPU at all** and **one** Cortex-A7 core at 1008 MHz. Every
 pixel is drawn by a software rasterizer.
 
@@ -44,6 +51,11 @@ pixel is drawn by a software rasterizer.
 | --- | ---: | --- |
 | **120x120 — the default** | **11.9 fps** | soft 2x upscale, whole interface |
 | 240x240 | 7.8 fps | native, 1:1, sharpest |
+
+The default no longer costs a soft *interface*. At 120x120 the world renders at
+120x120 and the hotbar, items, HUD and menus are drawn over it at the panel's
+real 240x240, so only the world is upscaled. See
+[docs/NATIVE-UI.md](docs/NATIVE-UI.md).
 
 **Both figures are in-world**, measured by replaying a recorded real play session
 against the same restored world — not by standing still on a title screen. A
@@ -73,7 +85,7 @@ is fixed, so the trade is now four frames against a softer picture, and four
 frames matter a great deal at eight.
 
 **Prefer the sharper image?** 240x240 is one row away in the quick menu
-(**L + SELECT → VIDEO → SCREEN**), then RESTART to apply it — the game reads the
+(**L + SELECT → SETTINGS → SCREEN**), then RESTART to apply it — the game reads the
 size once at startup, so it cannot change in a running process. Editing
 `/mnt/FunKey/nanocraft/resolution.txt` does the same thing. Those two are the
 only sizes that divide the panel cleanly; anything between them shimmers.
@@ -90,7 +102,7 @@ the name, is the touch d-pad's size in pixels per millimetre and is recomputed
 from the window on every launch.
 
 This port's launcher takes the scale from the environment and will go below that
-floor. **VIDEO → GUI SCALE**:
+floor. **SETTINGS → GUI SCALE**:
 
 | | What it does |
 | --- | --- |
@@ -103,7 +115,7 @@ Like SCREEN, it is read at startup, so it takes a RESTART.
 
 ### Field of view
 
-**VIDEO → FOV**, 50 to 100 degrees. **70 is what Minecraft ships with**, and
+**SETTINGS → FOV**, 50 to 100 degrees. **70 is what Minecraft ships with**, and
 choosing 70 changes nothing at all.
 
 Pocket Edition 0.8.1 has no FOV setting — its entire settings vocabulary is 21
@@ -303,20 +315,38 @@ pick, B to go back.
 | --- | --- |
 | VOLUME / BRIGHT | adjust, immediately |
 | **CPU** | 1008 – 1248 MHz in 48 MHz steps, **applies at once** |
-| **VIDEO** | opens the video page — SCREEN, GUI SCALE and FOV |
+| **SETTINGS** | opens SCREEN, GUI SCALE, FOV, FPS CAP, CAMERA and CURSOR |
 | RESTART | relaunch the game, which is how a video change is applied |
 | **FORCE CLOSE** | kills the game — see below |
 | SHUTDOWN / RESUME | leave |
 
-The video page holds the settings the game reads only at startup, which is why
-they share a page and why it says so at the bottom of it:
+Quick Settings separates changes that need a restart from sensitivity changes
+that apply when you resume:
 
 | Row | What it does |
 | --- | --- |
 | **SCREEN** | 240x240 or 120x120 — **needs a restart** |
 | **GUI SCALE** | AUTO, FIT or STOCK — **needs a restart**. See [GUI scale](#gui-scale) |
 | **FOV** | 50 to 100 degrees, 70 is stock — **needs a restart**. See [Field of view](#field-of-view) |
+| **FPS CAP** | OFF or a frame-rate limit — **needs a restart** |
+| **CAMERA** | 10–200%, in 10% steps; defaults to **100%**, preserving the existing camera speed |
+| **CURSOR** | 10–200%, in 10% steps; defaults to **20%** for slower menu navigation |
 | BACK | to the main list; B does the same |
+
+![Quick Settings with independent camera and cursor sliders.](docs/img/quick-settings.png)
+
+Camera and cursor values persist together in
+`/mnt/FunKey/nanocraft/sensitivity.txt` as `100 20` (camera, then cursor).
+Left/right adjusts the selected slider; changes apply within half a second of
+resuming. The cursor uses the same fraction of the screen per second at 120x120
+and 240x240. Its percentage refers to the previous 240-pixel baseline; at
+120x120 the default is one tenth of the previous unscaled cursor speed.
+Camera movement uses its own multiplier and leaves Minecraft's
+`ctrl_sensitivity` setting alone. Missing or invalid files use the defaults.
+
+The native quick menu draws at the panel's 240x240 resolution independently
+of the game's selected render resolution. The preview above comes from its
+actual drawing code in a test framebuffer, not a capture from the console.
 
 **FORCE CLOSE is named for what it does.** It sends `SIGTERM` and then `SIGKILL`,
 so anything since Minecraft's last autosave is lost. To quit with a save, use

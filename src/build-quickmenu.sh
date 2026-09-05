@@ -9,13 +9,21 @@
 set -eu
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$HERE/quickmenu.c"
-OUT="$HERE/../opk-pe/quickmenu"
+if [ -d "$HERE/../opk-pe" ]; then
+    DEFAULT_OUT="$HERE/../opk-pe/quickmenu"
+    DEFAULT_INCLUDE="$HERE/../../ninecraft061/overlay/ninecraft/include"
+else
+    DEFAULT_OUT="$HERE/../opk/quickmenu"
+    DEFAULT_INCLUDE="$HERE/../build/overlay/ninecraft/include"
+fi
+OUT="${1:-$DEFAULT_OUT}"
+INPUT_INCLUDE="${NINECRAFT_INCLUDE:-$DEFAULT_INCLUDE}"
 
 CC=arm-linux-gnueabihf-gcc
 command -v "$CC" >/dev/null || { echo "no $CC - apt install gcc-arm-linux-gnueabihf"; exit 1; }
 
 "$CC" -static -Os -Wall -Wextra -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 \
-      -mfloat-abi=hard -o "$OUT" "$SRC"
+      -mfloat-abi=hard -I"$INPUT_INCLUDE" -o "$OUT" "$SRC"
 arm-linux-gnueabihf-strip "$OUT" 2>/dev/null || true
 
 echo "built: $OUT"

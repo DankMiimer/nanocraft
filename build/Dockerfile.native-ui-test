@@ -1,0 +1,42 @@
+# Dockerfile.native-ui-test - run tests/native_ui_gl_test.c against real software
+# OpenGL. The compositor in build/overlay/ninecraft/src/nano_ui.c cannot be
+# checked with stub headers: what it asserts about is framebuffer completeness,
+# blit filtering, scissor halving and the GL state the game is handed back, and
+# only a real driver answers those. llvmpipe answers them without a GPU, so this
+# runs anywhere Docker does and needs no console.
+#
+# Build context: a Ninecraft checkout (glad/, ancmp/, ninecraft/, SDL/) with the
+# NanoCraft repo tree at nanocraft/ (tests/ and build/overlay/), which is what
+# tests/native_ui_gl_test.c's relative include expects.
+#
+#   docker build -f Dockerfile.native-ui-test --target export -o <dir> <ctx>
+#
+# The test runs during the build, so a failing assertion fails the build. The
+# export stage emits the 240x240 frame it rendered, as a PPM, for eyeballing.
+FROM debian:bookworm-slim AS build
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates build-essential python3 python3-jinja2 \
+      libegl-dev libgl-dev libegl-mesa0 libgl1-mesa-dri libglx-mesa0 && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+
+# The real build generates these through glad_add_library in CMakeLists.txt with
+# exactly this API selection; generate the same pair here rather than compiling
+# the whole game to reach one file.
+RUN PYTHONPATH=/src/glad python3 -m glad --reproducible --out-path /glad \
+      --api egl=1.5,gl:compatibility=2.0 c --loader
+
+RUN gcc -std=gnu11 -O2 -Wall -Wextra -Werror -D_GNU_SOURCE \
+      -I/glad/include -I/src/ancmp -I/src/ninecraft/include -I/src/SDL/include \
+      /src/nanocraft/tests/native_ui_gl_test.c /glad/src/egl.c /glad/src/gl.c \
+      -o /native-ui-test -ldl -lm
+
+RUN LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe /native-ui-test /native-ui-frame.ppm
+
+FROM scratch AS export
+COPY --from=build /native-ui-frame.ppm /native-ui-frame.ppm

@@ -135,6 +135,84 @@ frames is worth more than sharpness. **120x120 became the default in v1.0.5**;
 240x240 stays one row away in the quick menu for anyone who would rather have
 the native image.
 
+### Splitting that trade: world at 120x120, interface at 240x240
+
+The upscale bought frames by making *everything* coarse, and only one of the two
+things on screen was ever expensive. A 240x240 world is four times the fragments
+of a 120x120 one and llvmpipe pays for every one of them; the hotbar, the item
+icons and the menu text are a few dozen textured quads drawn over a finished
+picture. Fitting the hotbar at 120 was the right fix for clipping, but it left
+8-pixel text rendered as 4 real pixels, doubled — legible only because you know
+what it says.
+
+`NINECRAFT_NATIVE_UI=1` splits the two. The window, the engine and every input
+coordinate are 240x240, exactly as at the native setting. Only `renderLevel` is
+redirected: it draws into a 120x120 renderbuffer, that buffer is blitted up once
+with `GL_NEAREST`, and the HUD and `Screen` rendering that follow it in the same
+frame land on the 240x240 window at full resolution. Nothing is reimplemented
+and no glyph is enlarged — the game draws its own interface, at the size the
+panel actually has.
+
+Three details make it hold together rather than merely mostly work:
+
+- **`glViewport` and `glScissor` are halved while the world pass is running.**
+  The game sets both in canvas coordinates; the world buffer is half that size
+  in each direction. The halving floors the low edge and ceils the high edge, so
+  an odd rectangle keeps its last row instead of losing it, and an empty
+  rectangle stays empty. Both are restored, in canvas coordinates, on the way
+  out — the caller must not be able to tell.
+- **Depth and stencil are cleared after the blit.** The HUD's item icons are
+  depth-tested; if they inherited the world's depth buffer they would be
+  occluded by terrain that is no longer being drawn.
+- **The hook refuses anything it has not verified.** It requires version 0.8.1,
+  the exact two-instruction `renderLevel` prologue and the expected distance to
+  `GameRenderer::render`, plus a complete framebuffer with working blit — ARB or
+  the EXT family, since the advertised context is GL 2.1 where neither is core.
+  Any of those missing prints one line and renders the old way; a redirect is
+  also skipped for any frame where another mod already owns the draw buffer.
+
+`launch-pe-nano.sh` turns it on for 120x120 and nothing else, because no other
+size has anything to gain. `NINECRAFT_NATIVE_UI=0` asks for the old behaviour.
+
+The compositor is covered by `tests/native_ui_gl_test.c`, which runs it against
+llvmpipe through EGL's surfaceless platform: framebuffer completeness, the
+halving of odd and empty scissor rectangles, that a world detail lands on
+exactly two native pixels while a UI stroke stays one, that depth, stencil,
+scissor and framebuffer bindings come back as the game left them, and that three
+consecutive frames behave the same. Stub headers cannot answer any of that.
+
+### The chat button, removed by not drawing it
+
+0.8.1 draws a chat button in the upper-right corner for the Xperia Play. It
+opens a keyboard this console does not have, and on a 120-pixel screen it costs
+a corner of the view to do nothing.
+
+The temptation is to paint over it after the fact, which would also paint over
+the world behind it. The right lever is smaller than that: `XperiaPlayInput`'s
+vtable slot 5 is `XperiaPlayInput::render(float)`, that method draws exactly one
+quad — four `Tesselator::vertexUV` calls between a `begin` and a `draw` — and
+**nothing branches to it directly**, so an empty function in that slot removes
+the icon and touches nothing else. The quad is identifiably the chat button
+rather than some other single quad because its literal pool holds 0.78125,
+0.8515625, 0.3203125 and 0.390625 — x=200..218, y=82..100 over `gui.png`'s
+256-pixel atlas.
+
+The obvious worry is an invisible button left behind. There is a hit rectangle:
+`onConfigChanged` builds one at `this+0x40`, padded a quarter of the icon's size
+outward from the drawn rectangle. It is read in exactly one place —
+`XperiaPlayInput::tick`, which hit-tests it against `Mouse::isButtonDown(1)` and
+sets the pressed flag at `this+0x58` that `render` reads back for its colour —
+and this port replaced that method's vtable slot with keyboard movement long
+before this change, for unrelated reasons. So the click path was already gone;
+this only stops the drawing.
+
+`Gui::renderChatMessages` is a separate path and is untouched, so messages still
+appear. The hook is guarded on version 0.8.1 and on the slot still holding the
+function it is named after, logs `[chat-button] hidden` or why it declined, and
+does nothing at all unless `NINECRAFT_CHAT_BUTTON=0` is set —
+`launch-pe-nano.sh` sets it. `tests/chat_button_vtable_check.py` re-checks the
+slot and the sprite against a library without needing a toolchain.
+
 ### Field of view, in a build with no FOV setting
 
 The same lesson as the hotbar, generalised: **the absence of an option key does

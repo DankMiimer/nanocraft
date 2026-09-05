@@ -14,6 +14,7 @@
  * clicks; R2+A also clicks and R2+B goes back, matching the 1.2 modifier habit.
  */
 #include <ninecraft/input/miyoo_input.h>
+#include <ninecraft/input/sensitivity.h>
 #include <glad/gl.h>
 
 #include <stdio.h>
@@ -57,6 +58,22 @@ static float carry_x;
 static float carry_y;
 static Uint32 last_tick;
 static int quit_sent;
+static nc_sensitivity sensitivity = { NC_CAMERA_DEFAULT, NC_CURSOR_DEFAULT };
+static const char *sensitivity_path;
+static int sensitivity_enabled;
+static Uint32 sensitivity_checked;
+static int last_in_world;
+
+static void reload_sensitivity(Uint32 now) {
+    if (!sensitivity_path) return;
+    nc_sensitivity next = nc_sensitivity_read(sensitivity_path);
+    if (next.camera != sensitivity.camera || next.cursor != sensitivity.cursor) {
+        carry_x = carry_y = 0.0f;
+        fprintf(stderr, "[input] camera=%d%% cursor=%d%%\n", next.camera, next.cursor);
+    }
+    sensitivity = next;
+    sensitivity_checked = now;
+}
 
 static void push_key(SDL_Keycode key, int down) {
     SDL_Event event;
@@ -255,6 +272,14 @@ int miyoo_input_init(SDL_Window *window) {
     cursor_x = width / 2;
     cursor_y = height / 2;
     last_tick = SDL_GetTicks();
+    last_in_world = mouse_pointer_hidden;
+    sensitivity_path = getenv("NINECRAFT_INPUT_SETTINGS");
+    sensitivity_enabled = sensitivity_path && *sensitivity_path;
+    if (!sensitivity_enabled) sensitivity_path = NULL;
+    reload_sensitivity(last_tick);
+    if (sensitivity_enabled)
+        fprintf(stderr, "[input] camera=%d%% cursor=%d%% (240px baseline)\n",
+                sensitivity.camera, sensitivity.cursor);
     fprintf(stderr, "miyoo-input: ready on %s%s\n", device,
             input_grabbed ? " (exclusive grab)" : "");
     return 0;
@@ -264,6 +289,8 @@ void miyoo_input_tick(SDL_Window *window, bool *running) {
     if (input_fd < 0) return;
 
     Uint32 now = SDL_GetTicks();
+    if ((Uint32)(now - sensitivity_checked) >= 500u)
+        reload_sensitivity(now);
     struct input_event event;
     while (read(input_fd, &event, sizeof(event)) == (ssize_t)sizeof(event)) {
         if (event.type == EV_KEY && event.value != 2)
@@ -291,6 +318,15 @@ void miyoo_input_tick(SDL_Window *window, bool *running) {
 
     Uint32 elapsed = now - last_tick;
     last_tick = now;
+    /* SIGSTOP in the quick menu must not accumulate movement on resume.
+     * Reset acceleration and subpixel remainder when switching input modes. */
+    if (elapsed > 1000u || last_in_world != mouse_pointer_hidden) {
+        carry_x = carry_y = 0.0f;
+        for (unsigned int code = 0; code <= KEY_MAX; ++code)
+            if (held[code]) held_since[code] = now;
+        elapsed = 0;
+        last_in_world = mouse_pointer_hidden;
+    }
     if (elapsed > 250u) elapsed = 250u;
     float tick_scale = (float)elapsed * 60.0f / 1000.0f;
 
@@ -304,8 +340,12 @@ void miyoo_input_tick(SDL_Window *window, bool *running) {
         dy += ramp(MB_DOWN, now) - ramp(MB_UP, now);
     }
 
-    carry_x += dx * tick_scale;
-    carry_y += dy * tick_scale;
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    float gain_x = sensitivity_enabled ? nc_motion_gain(sensitivity, mouse_pointer_hidden, width) : 1.0f;
+    float gain_y = sensitivity_enabled ? nc_motion_gain(sensitivity, mouse_pointer_hidden, height) : 1.0f;
+    carry_x += dx * tick_scale * gain_x;
+    carry_y += dy * tick_scale * gain_y;
     int ix = (int)carry_x;
     int iy = (int)carry_y;
     carry_x -= ix;

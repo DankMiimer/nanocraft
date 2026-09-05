@@ -7,6 +7,17 @@ this page.
 > **No game files are included.** You supply your own legally obtained Minecraft
 > Pocket Edition 0.8.1 APK, 32-bit `armeabi-v7a`.
 
+## Already have NanoCraft? Read this first
+
+Most releases change only the launcher, so upgrading is one file. **v1.0.11 is
+not one of those.** It changes the game runtime, which lives in the payload, so
+you need step 1 **and** step 2. Replacing only the `.opk` leaves the old runtime
+behind the new menu — which is the fault this release exists to fix.
+
+Overwrite `/mnt/FunKey/nanocraft/ninecraft` along with the rest of step 2. Your
+worlds, options and installed game are elsewhere and are untouched, and you can
+skip step 3.
+
 ## What you need
 
 - An **Anbernic RG Nano** running DrUm78's FunKey-OS build.
@@ -72,19 +83,27 @@ off. Every launch after that goes straight to the game.
 **Resolution.** The default is 120x120, for roughly 12 fps instead of 8, at the
 cost of a soft 2x-upscaled picture. Write `240 240` into
 `/mnt/FunKey/nanocraft/resolution.txt` for the native, sharper image. Those are
-the only two sizes that divide the panel cleanly. The quick menu's VIDEO page
+the only two sizes that divide the panel cleanly. The quick menu's SETTINGS page
 does the same thing.
 
 **GUI scale.** `/mnt/FunKey/nanocraft/guiscale.txt` holds `fit` (the default:
 size the interface to the hotbar, which shrinks it to fit at 120x120 and grows
 it into the spare room at 240x240), `auto` (shrink only when it must, so
 240x240 is left as older versions drew it) or a number. Also on the quick menu's
-VIDEO page.
+SETTINGS page.
 
 **Field of view.** `/mnt/FunKey/nanocraft/fov.txt` holds an angle in degrees
 from 50 to 100. 70 is what Minecraft ships with and is the default; choosing it
 changes nothing. The game itself has no FOV setting — the launcher rewrites the
-angle the renderer uses. Also on the quick menu's VIDEO page.
+angle the renderer uses. Also on the quick menu's SETTINGS page.
+
+**Camera and cursor speed (new test build).** Open **L + SELECT → SETTINGS**,
+choose CAMERA or CURSOR, and use left/right. Both range from 10% to 200% in
+10% steps and apply on resume. CAMERA defaults to 100%, retaining the existing
+camera movement. CURSOR defaults to 20%, with screen-relative movement at both
+resolutions. `/mnt/FunKey/nanocraft/sensitivity.txt` stores the two percentages
+as `100 20`. Install the matching runtime and OPK together; an older runtime
+will ignore the sliders. See [build and test notes](docs/SENSITIVITY-BUILD.md).
 
 **Controls.** Drop your own `minecraft.key` into `/mnt/FunKey/nanocraft/` and it
 overrides the packaged one. Verify any edit with `keymap save`, because

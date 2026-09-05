@@ -34,8 +34,9 @@ set -eu
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NAME=NanoCraft_funkey-s
-STAGE=$HOME/.nanocraft-opk-stage
-OUT=$HOME/$NAME.opk
+STAGE=$(mktemp -d "${TMPDIR:-/tmp}/nanocraft-opk.XXXXXX")
+trap 'rm -rf "$STAGE"' EXIT
+OUT="${1:-$SRC/../$NAME.opk}"
 
 PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh"
 PAYLOAD_PY=""
@@ -46,6 +47,9 @@ PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
               fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw
               capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw cap20.raw cap25.raw cap30.raw
               cpu1008.raw cpu1056.raw cpu1104.raw cpu1152.raw cpu1200.raw cpu1248.raw"
+SENS_DATA=""
+for s in $(seq 10 10 200); do SENS_DATA="$SENS_DATA sens$s.raw"; done
+PAYLOAD_DATA="$PAYLOAD_DATA $SENS_DATA"
 # nano-clk is a static ARM binary, not a script: it writes the CPU PLL through
 # /dev/mem, which the quick menu's CPU row drives. Static so it depends on
 # nothing - this console is musl and the toolchain is glibc.
@@ -78,8 +82,6 @@ if [ ! -f "$SRC/menubg.raw" ] || [ ! -f "$SRC/videobg.raw" ]; then
   exit 1
 fi
 
-rm -rf "$STAGE"
-mkdir -p "$STAGE"
 for f in $PAYLOAD_SCRIPTS $PAYLOAD_PY $PAYLOAD_DATA $PAYLOAD_BIN; do
   cp "$SRC/$f" "$STAGE/"
 done
@@ -141,7 +143,7 @@ for f in res240.raw res120.raw gsauto.raw gsfit.raw gsstock.raw \
          fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw \
          capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw cap20.raw cap25.raw cap30.raw \
          cpu1008.raw cpu1056.raw cpu1104.raw \
-         cpu1152.raw cpu1200.raw cpu1248.raw; do
+         cpu1152.raw cpu1200.raw cpu1248.raw $SENS_DATA; do
   if [ "$(wc -c < "$STAGE/$f")" -ne 2736 ]; then
     echo "ERROR: $f is $(wc -c < "$STAGE/$f") bytes, expected 2736."
     echo "       Rebuild the strips with ./make-menu-bg.sh"
@@ -223,8 +225,6 @@ if find "$STAGE" -iname "*.apk" -o -iname "*libminecraftpe*" -o -iname "*.log" |
   exit 1
 fi
 
-rm -f "$OUT"
 mksquashfs "$STAGE" "$OUT" -all-root -noappend -no-exports -no-xattrs -comp gzip >/dev/null
-cp "$OUT" "$SRC/../$NAME.opk"
-echo "built: $SRC/../$NAME.opk  ($(wc -c < "$OUT") bytes)"
+echo "built: $OUT  ($(wc -c < "$OUT") bytes)"
 unsquashfs -l "$OUT" | tail -12

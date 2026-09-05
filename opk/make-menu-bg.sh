@@ -28,7 +28,7 @@ drawtext=fontfile=menufont.ttf:text='QUICK MENU':fontcolor=0xE8E8E8:fontsize=15:
 drawtext=fontfile=menufont.ttf:text='VOLUME':fontcolor=0xE8E8E8:fontsize=12:x=16:y=38,\
 drawtext=fontfile=menufont.ttf:text='BRIGHT':fontcolor=0xE8E8E8:fontsize=12:x=16:y=62,\
 drawtext=fontfile=menufont.ttf:text='CPU':fontcolor=0xE8E8E8:fontsize=12:x=16:y=86,\
-drawtext=fontfile=menufont.ttf:text='VIDEO':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
+drawtext=fontfile=menufont.ttf:text='SETTINGS':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
 drawtext=fontfile=menufont.ttf:text='>':fontcolor=0x7C8AA8:fontsize=12:x=140:y=110,\
 drawtext=fontfile=menufont.ttf:text='RESTART':fontcolor=0xE8E8E8:fontsize=12:x=16:y=134,\
 drawtext=fontfile=menufont.ttf:text='FORCE CLOSE':fontcolor=0xE8E8E8:fontsize=12:x=16:y=158,\
@@ -45,16 +45,16 @@ ffmpeg -y -hide_banner -loglevel error -i menubg.png -f rawvideo -pix_fmt rgb565
 # the main page, now covering every setting here.
 ffmpeg -y -hide_banner -loglevel error -f lavfi -i "color=c=0x101822:s=240x240" -vf "\
 drawbox=x=0:y=0:w=240:h=28:color=0x2a3550:t=fill,\
-drawtext=fontfile=menufont.ttf:text='VIDEO SETTINGS':fontcolor=0xE8E8E8:fontsize=15:x=(w-text_w)/2:y=6,\
+drawtext=fontfile=menufont.ttf:text='QUICK SETTINGS':fontcolor=0xE8E8E8:fontsize=15:x=(w-text_w)/2:y=6,\
 drawtext=fontfile=menufont.ttf:text='SCREEN':fontcolor=0xE8E8E8:fontsize=12:x=16:y=38,\
 drawtext=fontfile=menufont.ttf:text='GUI SCALE':fontcolor=0xE8E8E8:fontsize=12:x=16:y=62,\
 drawtext=fontfile=menufont.ttf:text='FOV':fontcolor=0xE8E8E8:fontsize=12:x=16:y=86,\
 drawtext=fontfile=menufont.ttf:text='FPS CAP':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
-drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=134,\
-drawtext=fontfile=menufont.ttf:text='AUTO/FIT  hotbar always fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=166,\
-drawtext=fontfile=menufont.ttf:text='STOCK     crisp, clips at 120':fontcolor=0x7C8AA8:fontsize=10:x=16:y=180,\
-drawtext=fontfile=menufont.ttf:text='FOV 70 and CAP OFF are stock':fontcolor=0x7C8AA8:fontsize=10:x=16:y=194,\
-drawtext=fontfile=menufont.ttf:text='all of these need a restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
+drawtext=fontfile=menufont.ttf:text='CAMERA':fontcolor=0xE8E8E8:fontsize=12:x=16:y=134,\
+drawtext=fontfile=menufont.ttf:text='CURSOR':fontcolor=0xE8E8E8:fontsize=12:x=16:y=158,\
+drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=182,\
+drawtext=fontfile=menufont.ttf:text='camera / cursor apply on resume':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=208,\
+drawtext=fontfile=menufont.ttf:text='video changes need a restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
   -frames:v 1 videobg.png
 ffmpeg -y -hide_banner -loglevel error -i videobg.png -f rawvideo -pix_fmt rgb565le videobg.raw
 
@@ -62,13 +62,17 @@ ffmpeg -y -hide_banner -loglevel error -i videobg.png -f rawvideo -pix_fmt rgb56
 # 76x18, blitted at their row. Same background colour so they sit flush.
 strip() {   # strip <outname> <text> <colour>
   ffmpeg -y -hide_banner -loglevel error -f lavfi -i "color=c=0x101822:s=76x18" -vf \
-    "drawtext=fontfile=menufont.ttf:text='$2':fontcolor=$3:fontsize=12:x=0:y=2" \
+    "drawtext=fontfile=menufont.ttf:expansion=none:text='$2':fontcolor=$3:fontsize=12:x=0:y=2" \
     -frames:v 1 "$1.png"
   ffmpeg -y -hide_banner -loglevel error -i "$1.png" -f rawvideo -pix_fmt rgb565le "$1.raw"
 }
 
 strip res240 "240x240" 0xF0C460
 strip res120 "120x120" 0xF0C460
+
+for s in $(seq 10 10 200); do
+  strip "sens$s" "${s}%" 0xF0C460
+done
 
 # Interface scale. AUTO and FIT both always fit; STOCK is the one that can clip,
 # so it gets the warm colour the CPU ladder uses for "past the safe setting".
@@ -107,6 +111,6 @@ done
 for f in menubg.raw videobg.raw; do
   echo "wrote $f ($(wc -c < "$f") bytes, expect 115200)"
 done
-for f in res*.raw gs*.raw fov*.raw cap*.raw cpu*.raw; do
+for f in res*.raw gs*.raw fov*.raw cap*.raw cpu*.raw sens*.raw; do
   echo "  $f $(wc -c < "$f") bytes (expect $((76 * 18 * 2)))"
 done

@@ -91,6 +91,31 @@ export NINECRAFT_HEIGHT="$H"
 # "fit" sizes the interface to the hotbar in whichever direction it has to go,
 # so it fits at 120x120 and fills the spare room at 240x240.
 export NINECRAFT_GUI_SCALE="${NINECRAFT_GUI_SCALE:-fit}"
+export NINECRAFT_INPUT_SETTINGS="${NINECRAFT_INPUT_SETTINGS:-$D/sensitivity.txt}"
+
+# Native-resolution interface. The world is the expensive surface: 240x240 is
+# four times the pixels of 120x120 and llvmpipe charges for every one of them.
+# The hotbar, item icons and menu text are not expensive - they are a handful of
+# textured quads over a finished picture. So at 120x120 the game now renders the
+# world into its own 120x120 buffer, that buffer is point-scaled up once, and
+# the HUD and screens are drawn on top at the panel's real 240x240. The world
+# costs exactly what it did; text and items stop being 2x2 blocks.
+#
+# Only 120x120 has anything to gain, so this is off at every other size. The
+# build also switches itself off and renders the old way if the renderer it has
+# to hook is not the verified 0.8.1 one, or if the framebuffer objects it needs
+# are missing. NINECRAFT_NATIVE_UI=0 asks for the old behaviour outright.
+NATIVE_UI="${NINECRAFT_NATIVE_UI:-1}"
+[ "$W" = 120 ] && [ "$H" = 120 ] || NATIVE_UI=0
+export NINECRAFT_NATIVE_UI="$NATIVE_UI"
+
+# The upper-right chat button. 0.8.1 draws it for the Xperia Play, where it
+# opens a keyboard this console does not have, and it eats a corner of a 120
+# pixel screen to do it. The runtime blanks the one vtable slot that draws it;
+# the click path was already gone, because this port replaces that class's tick
+# with keyboard movement. Chat messages themselves are a different code path and
+# still appear. Set NINECRAFT_CHAT_BUTTON=1 to put the button back.
+export NINECRAFT_CHAT_BUTTON="${NINECRAFT_CHAT_BUTTON:-0}"
 
 # Field of view. 0.8.1 has no such setting -- the launcher rewrites the base
 # angle inside GameRenderer::getFov, which is where the projection actually
@@ -103,7 +128,7 @@ export NINECRAFT_FOV="${NINECRAFT_FOV:-70}"
 # at all, so a cap arriving switched on would silently slow an upgrade.
 export FBEGL_FPS_CAP="${FBEGL_FPS_CAP:-0}"
 
-echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE fov=$NINECRAFT_FOV cap=$FBEGL_FPS_CAP gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
+echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE ui=$NINECRAFT_NATIVE_UI chat=$NINECRAFT_CHAT_BUTTON fov=$NINECRAFT_FOV cap=$FBEGL_FPS_CAP gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
 
 # The console's power/menu button is answered by FunKey-OS with SIGUSR1, and it
 # arrives at the whole foreground process group rather than at a single pid. The

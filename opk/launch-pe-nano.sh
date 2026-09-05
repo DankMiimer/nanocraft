@@ -87,7 +87,12 @@ export NINECRAFT_GUI_SCALE="${NINECRAFT_GUI_SCALE:-fit}"
 # at all, so this default leaves an untouched console byte-for-byte stock.
 export NINECRAFT_FOV="${NINECRAFT_FOV:-70}"
 
-echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE fov=$NINECRAFT_FOV gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
+# Frame cap, read by the presenter in egl-wrap rather than by the game. 0 is
+# off, which is how every release before this one behaved: nothing paced frames
+# at all, so a cap arriving switched on would silently slow an upgrade.
+export FBEGL_FPS_CAP="${FBEGL_FPS_CAP:-0}"
+
+echo "[pe] ${W}x${H} gui=$NINECRAFT_GUI_SCALE fov=$NINECRAFT_FOV cap=$FBEGL_FPS_CAP gallium=$GALLIUM_DRIVER game=$GAME" | tee -a "$LOG"
 
 exec "$LOADER" --library-path "$LP" \
   "$D/ninecraft" --game "$GAME" --home "$D/home"

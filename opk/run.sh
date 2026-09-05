@@ -156,7 +156,15 @@ start_game() {
   FOV=70
   [ -f "$DATA/fov.txt" ] && read FOV < "$DATA/fov.txt" 2>/dev/null
   case "$FOV" in ''|*[!0-9]*) FOV=70 ;; esac
-  echo "[opk] starting at ${W}x${H} gui=$GS fov=$FOV" >> "$LOG"
+
+  # Frame cap, read by the framebuffer presenter rather than by the game. 0 is
+  # off, which is how this port behaved before the cap existed. A cap does not
+  # speed anything up; it evens out a rate that swings roughly 7 to 18 fps by
+  # holding early frames back, and sleeps the difference.
+  FPSCAP=0
+  [ -f "$DATA/fpscap.txt" ] && read FPSCAP < "$DATA/fpscap.txt" 2>/dev/null
+  case "$FPSCAP" in ''|*[!0-9]*) FPSCAP=0 ;; esac
+  echo "[opk] starting at ${W}x${H} gui=$GS fov=$FOV cap=$FPSCAP" >> "$LOG"
 
   # MIYOO_NO_GRAB=1 is what makes the quick menu possible. Ninecraft would
   # otherwise take an exclusive EVIOCGRAB on /dev/input/event0 and no other
@@ -164,7 +172,8 @@ start_game() {
   # exists to keep a front end from also seeing input, and no front end is
   # running while an OPK has the screen.
   MCPE_DATA="$DATA" NINECRAFT_WIDTH="$W" NINECRAFT_HEIGHT="$H" \
-    NINECRAFT_GUI_SCALE="$GS" NINECRAFT_FOV="$FOV" MIYOO_NO_GRAB=1 \
+    NINECRAFT_GUI_SCALE="$GS" NINECRAFT_FOV="$FOV" FBEGL_FPS_CAP="$FPSCAP" \
+    MIYOO_NO_GRAB=1 \
     sh "$APP_DIR/launch-pe-nano.sh" "$DATA/game081" >> "$LOG" 2>&1 &
   GAME=$!
 

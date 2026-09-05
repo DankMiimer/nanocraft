@@ -49,12 +49,12 @@ drawtext=fontfile=menufont.ttf:text='VIDEO SETTINGS':fontcolor=0xE8E8E8:fontsize
 drawtext=fontfile=menufont.ttf:text='SCREEN':fontcolor=0xE8E8E8:fontsize=12:x=16:y=38,\
 drawtext=fontfile=menufont.ttf:text='GUI SCALE':fontcolor=0xE8E8E8:fontsize=12:x=16:y=62,\
 drawtext=fontfile=menufont.ttf:text='FOV':fontcolor=0xE8E8E8:fontsize=12:x=16:y=86,\
-drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
-drawtext=fontfile=menufont.ttf:text='AUTO   hotbar always fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=144,\
-drawtext=fontfile=menufont.ttf:text='FIT    bigger, still fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=158,\
-drawtext=fontfile=menufont.ttf:text='STOCK  crisp, clips at 120':fontcolor=0x7C8AA8:fontsize=10:x=16:y=172,\
-drawtext=fontfile=menufont.ttf:text='FOV    70 is what the game ships':fontcolor=0x7C8AA8:fontsize=10:x=16:y=190,\
-drawtext=fontfile=menufont.ttf:text='all three need a restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
+drawtext=fontfile=menufont.ttf:text='FPS CAP':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
+drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=134,\
+drawtext=fontfile=menufont.ttf:text='AUTO/FIT  hotbar always fits':fontcolor=0x7C8AA8:fontsize=10:x=16:y=166,\
+drawtext=fontfile=menufont.ttf:text='STOCK     crisp, clips at 120':fontcolor=0x7C8AA8:fontsize=10:x=16:y=180,\
+drawtext=fontfile=menufont.ttf:text='FOV 70 and CAP OFF are stock':fontcolor=0x7C8AA8:fontsize=10:x=16:y=194,\
+drawtext=fontfile=menufont.ttf:text='all of these need a restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
   -frames:v 1 videobg.png
 ffmpeg -y -hide_banner -loglevel error -i videobg.png -f rawvideo -pix_fmt rgb565le videobg.raw
 
@@ -86,6 +86,13 @@ for f in 50 60 80 90 100; do
   strip "fov$f" "$f" 0xF0C460
 done
 
+# Frame cap. OFF is how the port has always behaved, so it takes the calm
+# colour; any cap is a deliberate slowing-down and takes the gold.
+strip capoff "OFF" 0x9AA8C0
+for c in 6 8 10 12 15; do
+  strip "cap$c" "$c FPS" 0xF0C460
+done
+
 # The CPU ladder is 48 MHz per step from stock. Stock is shown in a calm colour
 # and every overclock in a warmer one, so the screen itself says when the
 # console is running beyond its specification.
@@ -97,6 +104,6 @@ done
 for f in menubg.raw videobg.raw; do
   echo "wrote $f ($(wc -c < "$f") bytes, expect 115200)"
 done
-for f in res*.raw gs*.raw fov*.raw cpu*.raw; do
+for f in res*.raw gs*.raw fov*.raw cap*.raw cpu*.raw; do
   echo "  $f $(wc -c < "$f") bytes (expect $((76 * 18 * 2)))"
 done

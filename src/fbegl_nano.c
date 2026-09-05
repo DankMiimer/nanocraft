@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <errno.h>
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 
@@ -63,13 +64,58 @@
  */
 static int    g_stats_n;          /* 0 = instrumentation off */
 static int    g_stats_i;
-static double a_finish, a_read, a_blit, a_swap, a_gap, a_map;
+static double a_finish, a_read, a_blit, a_swap, a_gap, a_map, a_cap;
 static double g_prev_end;
 
 static double now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1.0e6;
+}
+
+/* --- frame cap (FBEGL_FPS_CAP=<fps>, 0 or unset = off) ----------------------
+ *
+ * Nothing paces frames on this console. There is no vsync wait in the present
+ * path -- fb_nano.h pans and returns -- so the game runs as fast as one A7 can
+ * finish a frame, which is not a steady rate: measured in-world at 120x120 the
+ * slow tenth of frames land near 7 fps and the fast tenth near 18. A cap trades
+ * the fast frames away to make the pace even, and gives the battery the
+ * difference, since a capped frame is spent asleep rather than working.
+ *
+ * It cannot help a frame that is ALREADY slower than the target; those pass
+ * through untouched. So a cap set above the slow tail buys very little, and the
+ * value worth choosing sits near the bottom of the measured spread rather than
+ * near its middle.
+ *
+ * Deliberately no catch-up: a frame that overruns its deadline does not cause
+ * the next one to be released early. Winning the time back would reintroduce
+ * exactly the unevenness the cap exists to remove.
+ */
+static double g_cap_period;       /* ms between frames, 0 = uncapped */
+static double g_cap_next;         /* when the next frame may be released */
+
+static double cap_wait(void) {
+    if (g_cap_period <= 0.0) {
+        return 0.0;
+    }
+    double t = now_ms();
+    if (g_cap_next <= 0.0) {
+        g_cap_next = t + g_cap_period;
+        return 0.0;
+    }
+    if (t >= g_cap_next) {
+        g_cap_next = t + g_cap_period;
+        return 0.0;
+    }
+    double ms = g_cap_next - t;
+    struct timespec req;
+    req.tv_sec  = (time_t)(ms / 1000.0);
+    req.tv_nsec = (long)((ms - (double)req.tv_sec * 1000.0) * 1.0e6);
+    while (nanosleep(&req, &req) == -1 && errno == EINTR) {
+        /* a signal, not a failure: finish the remainder nanosleep handed back */
+    }
+    g_cap_next += g_cap_period;
+    return ms;
 }
 
 static EGLBoolean (*real_swap)(EGLDisplay, EGLSurface);
@@ -190,11 +236,17 @@ static void fbegl_init(void) {
     g_quiet = getenv("FBPRESENT_QUIET") != NULL;
     g_stats_n = s ? atoi(s) : 0;
     { const char *pb = getenv("FBEGL_PBO"); g_pbo_want = pb && atoi(pb) != 0; }
+    { const char *fc = getenv("FBEGL_FPS_CAP");
+      double cap = fc ? atof(fc) : 0.0;
+      /* Below 1 fps is indistinguishable from a hang and above 60 cannot be
+       * reached here, so both mean "no cap" rather than something surprising. */
+      g_cap_period = (cap >= 1.0 && cap <= 60.0) ? 1000.0 / cap : 0.0; }
     if (g_stats_n < 0) g_stats_n = 0;
     resolve();
     fprintf(stderr, "[fbegl] nano wrapper init real_swap=%p real_gpa=%p real_query=%p "
-                    "stats=%d pbo=%d\n",
-            (void *)real_swap, (void *)real_gpa, (void *)real_query, g_stats_n, g_pbo_want);
+                    "stats=%d pbo=%d cap=%.1ffps\n",
+            (void *)real_swap, (void *)real_gpa, (void *)real_query, g_stats_n, g_pbo_want,
+            g_cap_period > 0.0 ? 1000.0 / g_cap_period : 0.0);
 }
 
 static void present(EGLDisplay dpy, EGLSurface surf) {
@@ -295,7 +347,9 @@ static void present(EGLDisplay dpy, EGLSurface surf) {
 EGLBoolean eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!g_stats_n) {
         present(dpy, surface);
-        return real_swap ? real_swap(dpy, surface) : EGL_TRUE;
+        EGLBoolean r = real_swap ? real_swap(dpy, surface) : EGL_TRUE;
+        cap_wait();
+        return r;
     }
 
     /* "gap" is everything that is NOT us: the game's own frame — simulation
@@ -310,28 +364,35 @@ EGLBoolean eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     EGLBoolean r = real_swap ? real_swap(dpy, surface) : EGL_TRUE;
     double t2 = now_ms();
     a_swap += t2 - t1;
-    g_prev_end = t2;
+    a_cap += cap_wait();
+    g_prev_end = now_ms();
 
     if (++g_stats_i >= g_stats_n) {
         double n = (double)g_stats_i;
-        double total = a_gap + a_finish + a_read + a_blit + a_swap + a_map;
+        double total = a_gap + a_finish + a_read + a_blit + a_swap + a_map + a_cap;
+        /* Only when capping, so an uncapped run's line is byte-identical to
+         * what every earlier measurement in the notes was read off. */
+        char capbuf[48];
+        capbuf[0] = '\0';
+        if (g_cap_period > 0.0)
+            snprintf(capbuf, sizeof capbuf, " | cap %.1f", a_cap / n);
         if (g_pbo_on) {
             fprintf(stderr,
                     "[fbegl] stats n=%d PBO ms/frame: app+submit %.1f | readpx-issue %.2f | "
-                    "map %.1f | blit %.1f | eglSwap %.2f | total %.1f (%.2f fps)\n",
+                    "map %.1f | blit %.1f | eglSwap %.2f%s | total %.1f (%.2f fps)\n",
                     g_stats_i, a_gap / n, a_read / n, a_map / n, a_blit / n,
-                    a_swap / n, total / n, total > 0.0 ? 1000.0 * n / total : 0.0);
+                    a_swap / n, capbuf, total / n, total > 0.0 ? 1000.0 * n / total : 0.0);
         } else {
             fprintf(stderr,
                     "[fbegl] stats n=%d ms/frame: app+submit %.1f | glFinish %.1f | "
-                    "readpx %.1f | blit %.1f | eglSwap %.2f | total %.1f "
+                    "readpx %.1f | blit %.1f | eglSwap %.2f%s | total %.1f "
                     "(%.2f fps) | present share %.0f%%\n",
                     g_stats_i, a_gap / n, a_finish / n, a_read / n,
-                    a_blit / n, a_swap / n, total / n,
+                    a_blit / n, a_swap / n, capbuf, total / n,
                     total > 0.0 ? 1000.0 * n / total : 0.0,
                     total > 0.0 ? 100.0 * (a_read + a_blit) / total : 0.0);
         }
-        a_gap = a_finish = a_read = a_blit = a_swap = a_map = 0.0;
+        a_gap = a_finish = a_read = a_blit = a_swap = a_map = a_cap = 0.0;
         g_stats_i = 0;
     }
     return r;

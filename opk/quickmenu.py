@@ -23,8 +23,9 @@ NO FONT ENGINE IS USED. The device has no PIL and no reachable TTF stack from
 python, so every glyph is pre-rendered by make-menu-bg.sh on the workstation:
 menubg.raw and videobg.raw for the two pages' layouts, res240/res120.raw for the
 screen settings, gsauto/gsfit/gsstock.raw for the interface scales and
-fov50..fov100.raw for the angles. Everything that changes -- the cursor and the
-bars -- is drawn here as rectangles.
+fov50..fov100.raw for the angles and capoff/cap6..cap15.raw for the frame cap.
+Everything that changes -- the cursor and the bars -- is drawn here as
+rectangles.
 
 TWO PAGES. The main list, and a video page reached from its VIDEO row. Every
 setting on that page is read by the game at startup and so needs a restart,
@@ -53,6 +54,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.environ.get("MCPE_DATA", "/mnt/FunKey/nanocraft")
 RESFILE = os.path.join(DATA, "resolution.txt")
 GSFILE = os.path.join(DATA, "guiscale.txt")
+CAPFILE = os.path.join(DATA, "fpscap.txt")
 FOVFILE = os.path.join(DATA, "fov.txt")
 IDLE_TIMEOUT = 90.0          # never leave the console wedged in the menu
 
@@ -66,9 +68,9 @@ VOLUME, BRIGHT, CPU, VIDEO, RESTART, CLOSE, SHUTDOWN, RESUME = range(8)
 # the main list because both rows are the same kind of setting, both are read by
 # the game only at startup, and one footer can say so for both. It also keeps
 # the main list at eight rows, which is what the 240-pixel panel holds.
-V_SCREEN, V_GUISCALE, V_FOV, V_BACK = range(4)
+V_SCREEN, V_GUISCALE, V_FOV, V_CAP, V_BACK = range(5)
 MAIN, VIDEO_PAGE = 0, 1
-PAGE_ROWS = (8, 4)
+PAGE_ROWS = (8, 5)
 
 ROW_TOP = [34, 58, 82, 106, 130, 154, 178, 202]
 ROW_H = 22
@@ -117,6 +119,23 @@ SCALE_STRIP = {"auto": "gsauto.raw", "fit": "gsfit.raw", "1.0": "gsstock.raw"}
 # running a build without any of this.
 FOVS = [50, 60, 70, 80, 90, 100]
 DEFAULT_FOV = 70
+
+# Frame cap, passed to the presenter as FBEGL_FPS_CAP. 0 is off, and off is the
+# default: nothing paced frames before this existed, and a cap that arrived
+# switched on would quietly slow every console that upgraded.
+#
+# A cap does not make anything faster. It makes the pace EVEN, by holding back
+# frames that finish early -- measured in-world at 120x120, the fast tenth of
+# frames run near 18 fps and the slow tenth near 7, and it is that swing rather
+# than the average that is felt. It cannot help a frame already slower than the
+# target, so a cap set above the slow tail buys very little; the value worth
+# choosing sits near the bottom of the spread. The time not spent rendering is
+# spent asleep, which the battery keeps.
+CAPS = [0, 6, 8, 10, 12, 15]
+DEFAULT_CAP = 0
+CAP_STRIP = {0: "capoff.raw"}
+for _c in CAPS[1:]:
+    CAP_STRIP[_c] = "cap%d.raw" % _c
 
 # The CPU ladder, 48 MHz per step from stock, as reported by `nano-clk --list`.
 # It stops at 1248: the V3s is specified at 1.2 GHz, there is no thermal
@@ -204,6 +223,28 @@ def write_fov(v):
         return False
 
 
+def read_fpscap():
+    """Current frame cap, defaulting to off."""
+    try:
+        with open(CAPFILE) as f:
+            v = int(f.read().split()[0])
+        if v in CAPS:
+            return v
+    except Exception:
+        pass
+    return DEFAULT_CAP
+
+
+def write_fpscap(v):
+    try:
+        os.makedirs(DATA, exist_ok=True)
+        with open(CAPFILE, "w") as f:
+            f.write("%d\n" % v)
+        return True
+    except OSError:
+        return False
+
+
 def read_clock():
     """Current CPU MHz, or None if the tool is missing or /dev/mem is refused."""
     try:
@@ -243,6 +284,7 @@ class Screen:
         self.clkval = {m: self._load("cpu%d.raw" % m, strip) for m in CLOCKS}
         self.gsval = {v: self._load(SCALE_STRIP[v], strip) for v in SCALES}
         self.fovval = {v: self._load("fov%d.raw" % v, strip) for v in FOVS}
+        self.capval = {v: self._load(CAP_STRIP[v], strip) for v in CAPS}
 
     @staticmethod
     def _load(name, size):
@@ -330,6 +372,7 @@ def main():
     size = read_size()
     gscale = read_guiscale()
     fov = read_fov()
+    fpscap = read_fpscap()
     clock = read_clock()
 
     scr = Screen()
@@ -374,6 +417,8 @@ def main():
             scr.blit(scr.gsval.get(gscale), VAL_X, ROW_TOP[V_GUISCALE] + vy,
                      VAL_W, VAL_H)
             scr.blit(scr.fovval.get(fov), VAL_X, ROW_TOP[V_FOV] + vy,
+                     VAL_W, VAL_H)
+            scr.blit(scr.capval.get(fpscap), VAL_X, ROW_TOP[V_CAP] + vy,
                      VAL_W, VAL_H)
         scr.cursor(ROW_TOP[sel] + ROW_H // 2)
 
@@ -425,6 +470,14 @@ def main():
                                        i + (1 if code == K_RIGHT else -1)))
                         fov = FOVS[i]
                         write_fov(fov)
+                        dirty = True
+                    elif sel == V_CAP:
+                        # Same clamped ladder as FOV, and for the same reason.
+                        i = CAPS.index(fpscap) if fpscap in CAPS else 0
+                        i = max(0, min(len(CAPS) - 1,
+                                       i + (1 if code == K_RIGHT else -1)))
+                        fpscap = CAPS[i]
+                        write_fpscap(fpscap)
                         dirty = True
                 elif sel == VOLUME:
                     vol = max(0, min(100, vol + step))

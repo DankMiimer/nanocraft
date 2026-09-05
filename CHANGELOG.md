@@ -26,6 +26,18 @@
   rows on the native 240x240 menu framebuffer.
 - Add native input/configuration tests and a test that drives the actual menu
   event loop and captures its framebuffer. Cross-compile both ARM binaries.
+- Fix crash attribution in the diagnostic build, which has never once run. A
+  literal `
+` where a line continuation belonged meant `awk` was handed `n` as
+  a filename, so every report since v1.0.10 carried
+  `awk: n: No such file or directory` where the resolved fault should have been.
+  Reported from a tester's console, section 9 of their report.
+- Tell the diagnostic report which file actually unblocks a console. When the
+  memory modules refuse a kernel, `ensure-memory.sh` writes everything needed to
+  build a set into `nanocraft-kernel.txt` — it cannot go in the report, being
+  the kernel's symbol table and image — so a tester who sends the report, having
+  done everything right, gets asked for a second file. The report now names it,
+  in its own section and in its closing instructions.
 - Ship the sensitivity strips in `NanoCraftDiag_funkey-s.opk` as well. Its file
   list had never been given them, so the diagnostic build's SETTINGS page was
   missing what the shipping build's has - which defeats the point of a

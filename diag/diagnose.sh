@@ -170,15 +170,54 @@ say ""
 
 sec "9. CRASH ATTRIBUTION"
 dmesg > "$DATA/diag-dmesg.txt" 2>/dev/null
-awk -v maps="$DATA/diag-maps.txt" -f "$APP_DIR/resolve-fault.awk" \n    "$DATA/diag-dmesg.txt" >> "$REPORT" 2>&1
+awk -v maps="$DATA/diag-maps.txt" -f "$APP_DIR/resolve-fault.awk" \
+    "$DATA/diag-dmesg.txt" >> "$REPORT" 2>&1
 say ""
 say "\$ kernel messages (tail)"
 tail -30 "$DATA/diag-dmesg.txt" >> "$REPORT" 2>&1
 say ""
 
+# The commonest outcome on a console this port has never run on is that the
+# game never started at all: the compressed-memory modules are loaded only into
+# kernels somebody has verified. ensure-memory.sh writes everything needed to
+# build a set for THIS console into its own file - it cannot go in this report,
+# because it is the running kernel's symbol table and image, hundreds of
+# kilobytes of it. A tester who sends only this report therefore gets asked for
+# a second file, having already done everything right. So say, here, at the end
+# of the file they are about to send, which one actually unblocks them.
+KERNEL_REPORT=
+for f in /mnt/nanocraft-kernel.txt "$DATA/nanocraft-kernel.txt"; do
+  [ -s "$f" ] && KERNEL_REPORT=$f && break
+done
+
+sec "10. WHAT TO SEND"
+if [ -n "$KERNEL_REPORT" ]; then
+  say "THIS CONSOLE'S KERNEL IS NOT ONE THE BUNDLED MEMORY MODULES WERE BUILT"
+  say "FOR, which is why NanoCraft did not start. Sending this report alone"
+  say "cannot fix that. Send these, from the same drive you found this file on:"
+  say ""
+  say "    $KERNEL_REPORT"
+  for z in /mnt/nanocraft-kernel.zImage "$DATA/nanocraft-kernel.zImage"; do
+    [ -s "$z" ] && say "    $z"
+  done
+  say ""
+  say "They carry the running kernel's symbol table and image, which is what a"
+  say "module set has to be built and audited against. Send this report as well"
+  say "if you like - but those are the two that get this console running."
+else
+  say "Send this file, nanocraft-report.txt. It is enough on its own."
+fi
+say ""
+
 sec "END OF REPORT"
-say "Power off, put the SD card in a PC, and send nanocraft-report.txt from the"
-say "root of the large data partition. A second copy is at $REPORT_COPY."
+say "Power off, put the SD card in a PC, and take these from the root of the"
+say "large data partition:"
+say ""
+say "    nanocraft-report.txt   (this file; a second copy is at $REPORT_COPY)"
+if [ -n "$KERNEL_REPORT" ]; then
+  say "    nanocraft-kernel.txt   <- the one that gets this console running"
+  [ -s /mnt/nanocraft-kernel.zImage ] && say "    nanocraft-kernel.zImage"
+fi
 
 # Keep a copy beside the game for anyone with shell access.
 mkdir -p "$DATA" 2>/dev/null

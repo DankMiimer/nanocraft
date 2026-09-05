@@ -242,8 +242,8 @@ uniprocessor custom build, and `opk/modules/kernels` lists which builds have
 actually been verified. On anything else NanoCraft says so and refuses to start
 rather than run without the memory it needs. Rebuilding for your kernel needs no
 firmware change and is documented in
-[`opk/modules/README.md`](opk/modules/README.md); please open an issue with the
-`[mem]` line and `uname -a` and a verified set can be built for you.
+[`opk/modules/README.md`](opk/modules/README.md); it writes **`nanocraft-kernel.txt`** to the root of your SD card with
+everything needed to build you one — send that single file.
 
 ### If it fails for you, there is a diagnostic build
 

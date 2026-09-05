@@ -175,6 +175,71 @@ fi
 # will not load, the answer is to build ones that do, not to spend somebody's
 # flash endurance quietly.
 if [ "$UNKNOWN_KERNEL" = 1 ]; then
+  # Collect everything needed to build this console a module set, into one file
+  # at the root of the card where a person will actually find it. Asking someone
+  # to fetch /boot/zImage by hand is not a reasonable request on a console with
+  # no network and no shell - and every piece of this is already on the device.
+  #
+  # /proc/kallsyms is the important part: it is the running kernel's symbol
+  # table, in text, which is what the export audit needs. The zImage is copied
+  # beside it as a courtesy, but the audit does not require it.
+  # The card root is where a person will actually look, but fall back to the
+  # data directory if it is not writable - and never claim to have written a
+  # file that was not written, since this message is the only instruction the
+  # reporter gets.
+  # Note the subshells. POSIX says a redirection error on a SPECIAL built-in -
+  # and `:` is one - exits the shell, so probing writability with a bare
+  # `: > file` takes the whole launcher down on a read-only card instead of
+  # falling back.
+  REPORT=/mnt/nanocraft-kernel.txt
+  if ! ( : > "$REPORT" ) 2>/dev/null; then
+    REPORT=$DATA/nanocraft-kernel.txt
+    ( : > "$REPORT" ) 2>/dev/null || REPORT=
+  fi
+  {
+    echo "NanoCraft kernel report"
+    echo "Generated: $(date 2>/dev/null)"
+    echo
+    echo "Send this file to the NanoCraft issue tracker or Discord. It exists"
+    echo "because NanoCraft refused to load its compressed-memory modules into a"
+    echo "kernel nobody has verified them against, and everything needed to build"
+    echo "a set for this console is below. It contains no personal files and no"
+    echo "game content, and nothing was transmitted anywhere."
+    echo
+    echo "== add this line to opk/modules/kernels =="
+    echo "$KERNEL_IDENT|<set>"
+    echo
+    echo "== uname -a =="
+    uname -a
+    echo
+    echo "== /etc/os-release =="
+    cat /etc/os-release 2>/dev/null
+    echo
+    echo "== /proc/version =="
+    cat /proc/version 2>/dev/null
+    echo
+    echo "== vermagic the loader expects =="
+    for ko in /lib/modules/"$(uname -r)"/extra/*.ko /lib/modules/"$(uname -r)"/kernel/*.ko; do
+      [ -f "$ko" ] || continue
+      echo "$ko: $(strings "$ko" 2>/dev/null | grep -m1 vermagic)"
+    done
+    echo
+    echo "== memory =="
+    grep -E '^(MemTotal|SwapTotal)' /proc/meminfo 2>/dev/null
+    echo
+    echo "== kernel configuration, if this build exposes it =="
+    if [ -r /proc/config.gz ]; then
+      zcat /proc/config.gz 2>/dev/null || gunzip -c /proc/config.gz 2>/dev/null
+    else
+      echo "(absent - CONFIG_IKCONFIG is off, which is normal)"
+    fi
+    echo
+    echo "== /proc/kallsyms - the running kernel's symbol table =="
+    cat /proc/kallsyms 2>/dev/null
+  } >> "${REPORT:-/dev/null}" 2>/dev/null
+  [ -n "$REPORT" ] && cp /boot/zImage "$(dirname "$REPORT")/nanocraft-kernel.zImage" 2>/dev/null
+  sync
+
   {
     echo "[mem] this kernel is not one the bundled modules were built for:"
     echo "[mem]     $KERNEL_IDENT"
@@ -186,9 +251,16 @@ if [ "$UNKNOWN_KERNEL" = 1 ]; then
     echo "[mem]"
     echo "[mem] NanoCraft will not start without them: a world needs about 65 MB"
     echo "[mem] of anonymous memory and this console has $(mb MemTotal) MB of RAM."
-    echo "[mem] Please report the line above with 'uname -a' and a copy of"
-    echo "[mem] /boot/zImage, and a set for your console can be built and"
-    echo "[mem] audited. It needs no firmware change. See modules/README.md."
+    echo "[mem]"
+    if [ -n "$REPORT" ] && [ -s "$REPORT" ]; then
+      echo "[mem] EVERYTHING NEEDED TO FIX THIS HAS BEEN WRITTEN FOR YOU:"
+      echo "[mem]     $REPORT"
+      echo "[mem] Put the card in a PC and send that one file. A module set will"
+      echo "[mem] be built and audited for your console; no firmware change."
+    else
+      echo "[mem] A report could not be written to the card. Please send the"
+      echo "[mem] line above and the output of 'uname -a' instead."
+    fi
   } >&2
   exit 1
 fi

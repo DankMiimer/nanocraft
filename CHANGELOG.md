@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.0.9
+
+**If NanoCraft will not start on your kernel, it now collects the fix for you.**
+
+Since v1.0.6 the package refuses to load its compressed-memory modules into a
+kernel nobody has verified them against, and asked the reporter to send
+`uname -a` and a copy of `/boot/zImage`. That is an unreasonable request on a
+console with no network and no shell.
+
+It now writes **`nanocraft-kernel.txt`** to the root of the SD card instead,
+carrying the identity line, `uname -a`, the OS release, the vermagic the loader
+expects, the kernel configuration where the build exposes it, and the running
+kernel's full symbol table — which is the part that actually matters, because
+every symbol these modules import can be checked against the real kernel before
+anything is loaded on the hardware. Put the card in a PC, send the one file.
+
+A copy of the kernel image is placed beside it as a convenience; the audit does
+not need it.
+
+If the card root cannot be written the report goes to
+`/mnt/FunKey/nanocraft/` instead, and if it cannot be written at all the message
+says so rather than pointing at a file that is not there.
+
 ## v1.0.8
 
 **About 16% more frames, by putting a default back where the code said it was.**

@@ -162,9 +162,9 @@ one they have been verified against, NanoCraft says so and will not start:
 [mem] this kernel is not one the bundled modules were built for:
 [mem]     4.14.14-funkey #1 Thu Jun 18 07:57:19 CEST 2026
 [mem]
-[mem] Please report the line above with 'uname -a' and a copy of
-[mem] /boot/zImage, and a set for your console can be built and
-[mem] audited. It needs no firmware change.
+[mem] EVERYTHING NEEDED TO FIX THIS HAS BEEN WRITTEN FOR YOU:
+[mem]     nanocraft-kernel.txt   at the root of your SD card
+[mem] Put the card in a PC and send that one file.
 ```
 
 **This is stricter than the kernel's own check on purpose.** Linux compares a
@@ -178,11 +178,15 @@ It refuses rather than running without the memory it needs, because the failure
 that would otherwise follow — every menu working and the game dying the moment
 terrain loads — is a far more confusing thing to debug.
 
-**If that happens to you, please open an issue** with that `[mem]` line, the
-output of `uname -a`, and `/boot/zImage` from your console. The kernel's export
-table can be recovered from the zImage and audited against every symbol these
-modules need *before* anything is loaded on your hardware, so getting you a
-working set is a small job. It needs no firmware change.
+**If that happens to you, NanoCraft collects the answer itself.** It writes
+`nanocraft-kernel.txt` to the root of your SD card — your kernel's identity,
+version, configuration if the build exposes it, and its full symbol table. Put
+the card in a PC and attach that one file to an issue. Nothing has to be typed
+or fetched by hand.
+
+That symbol table is what matters: every symbol these modules need can be
+checked against your actual kernel *before* anything is loaded on your hardware,
+so building you a working set is a small job. It needs no firmware change.
 
 **Please include those `[mem]` lines in any report** — they are the single most
 useful thing you can send.

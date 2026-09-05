@@ -19,10 +19,12 @@
 # So the launcher refuses to load anything into a kernel that is not named here.
 # It is a whitelist of builds somebody has actually verified, not a guess.
 #
-# ADDING YOURS. Send `uname -a`, `/proc/version` and a copy of `/boot/zImage`.
-# The zImage is what matters: the kernel's export table can be recovered from it
-# and audited against every symbol these modules import, before anything is
-# loaded on your hardware. Rebuilding them needs no firmware change. See
+# ADDING YOURS. You do not have to collect anything by hand: when the launcher
+# refuses an unknown kernel it writes `nanocraft-kernel.txt` to the root of the
+# SD card, carrying the identity line, the configuration where the build exposes
+# it, and the kernel's full symbol table. That table is what matters - every
+# symbol these modules import can be checked against the real kernel before
+# anything is loaded on the hardware. Rebuilding needs no firmware change. See
 # README.md in this directory.
 #
 # Note this is deliberately not /proc/version verbatim: that line carries the

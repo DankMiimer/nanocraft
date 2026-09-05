@@ -1,0 +1,45 @@
+Name:	ld-linux-armhf.
+Umask:	0022
+State:	S (sleeping)
+Tgid:	439
+Ngid:	0
+Pid:	439
+PPid:	384
+TracerPid:	0
+Uid:	0	0	0	0
+Gid:	0	0	0	0
+FDSize:	32
+Groups:	0 10 
+VmPeak:	  103004 kB
+VmSize:	  102920 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	   43000 kB
+VmRSS:	   40868 kB
+RssAnon:	   22428 kB
+RssFile:	   18440 kB
+RssShmem:	       0 kB
+VmData:	   53176 kB
+VmStk:	     132 kB
+VmExe:	      96 kB
+VmLib:	   44964 kB
+VmPTE:	      88 kB
+VmPMD:	       0 kB
+VmSwap:	    3136 kB
+Threads:	8
+SigQ:	0/430
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000003006
+SigCgt:	0000000180004000
+CapInh:	0000000000000000
+CapPrm:	0000003fffffffff
+CapEff:	0000003fffffffff
+CapBnd:	0000003fffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Cpus_allowed:	1
+Cpus_allowed_list:	0
+voluntary_ctxt_switches:	587
+nonvoluntary_ctxt_switches:	7753

@@ -1,0 +1,127 @@
+b136c000-b1533000 rw-p 00000000 00:00 0 
+b1564000-b1666000 rw-p 00000000 00:00 0 
+b1666000-b1667000 ---p 00000000 00:00 0 
+b1667000-b1767000 rw-p 00000000 00:00 0 
+b1767000-b1768000 ---p 00000000 00:00 0 
+b1768000-b1868000 rw-p 00000000 00:00 0 
+b1868000-b1869000 ---p 00000000 00:00 0 
+b1869000-b1969000 rw-p 00000000 00:00 0 
+b1969000-b196a000 ---p 00000000 00:00 0 
+b196a000-b1a6a000 rw-p 00000000 00:00 0 
+b1a6a000-b1cf6000 r-xp 00000000 00:00 0 
+b1cf6000-b1cf7000 ---p 00000000 00:00 0 
+b1cf7000-b23fe000 rw-p 00000000 00:00 0 
+b23fe000-b23ff000 ---p 00000000 00:00 0 
+b23ff000-b2d00000 rw-p 00000000 00:00 0 
+b2d00000-b2d21000 rw-p 00000000 00:00 0 
+b2d21000-b2e00000 ---p 00000000 00:00 0 
+b2e04000-b2e21000 rw-s 00000000 00:06 126        /dev/fb0
+b2e21000-b2e26000 r-xp 00000000 00:00 0 
+b2e26000-b2e27000 rw-p 00000000 00:00 0 
+b2e27000-b2e2e000 r-xp 00000000 00:00 0 
+b2e2e000-b2f00000 rw-p 00000000 00:00 0 
+b2f00000-b2f21000 rw-p 00000000 00:00 0 
+b2f21000-b3000000 ---p 00000000 00:00 0 
+b3000000-b3003000 r-xp 00000000 00:00 0 
+b3003000-b3004000 rw-p 00000000 00:00 0 
+b3004000-b300d000 r-xp 00000000 00:00 0 
+b300d000-b30cc000 rw-p 00000000 00:00 0 
+b30cc000-b30cd000 ---p 00000000 00:00 0 
+b30cd000-b38cd000 rw-p 00000000 00:00 0 
+b38cd000-b38ce000 ---p 00000000 00:00 0 
+b38ce000-b40ce000 rw-p 00000000 00:00 0 
+b40ce000-b5305000 r-xp 00000000 b3:04 454        /mnt/FunKey/nanocraft/mesa/dri/swrast_dri.so
+b5305000-b5315000 ---p 01237000 b3:04 454        /mnt/FunKey/nanocraft/mesa/dri/swrast_dri.so
+b5315000-b53c4000 r--p 01237000 b3:04 454        /mnt/FunKey/nanocraft/mesa/dri/swrast_dri.so
+b53c4000-b5452000 rw-p 012e6000 b3:04 454        /mnt/FunKey/nanocraft/mesa/dri/swrast_dri.so
+b5452000-b54ef000 rw-p 00000000 00:00 0 
+b54ef000-b54f9000 r-xp 00000000 b3:04 452        /mnt/FunKey/nanocraft/lib/libdrm.so.2
+b54f9000-b5508000 ---p 0000a000 b3:04 452        /mnt/FunKey/nanocraft/lib/libdrm.so.2
+b5508000-b5509000 r--p 00009000 b3:04 452        /mnt/FunKey/nanocraft/lib/libdrm.so.2
+b5509000-b550a000 rw-p 0000a000 b3:04 452        /mnt/FunKey/nanocraft/lib/libdrm.so.2
+b550a000-b552d000 r-xp 00000000 b3:04 451        /mnt/FunKey/nanocraft/lib/libexpat.so.1
+b552d000-b553d000 ---p 00023000 b3:04 451        /mnt/FunKey/nanocraft/lib/libexpat.so.1
+b553d000-b553f000 r--p 00023000 b3:04 451        /mnt/FunKey/nanocraft/lib/libexpat.so.1
+b553f000-b5540000 rw-p 00025000 b3:04 451        /mnt/FunKey/nanocraft/lib/libexpat.so.1
+b5540000-b5547000 r-xp 00000000 b3:04 450        /mnt/FunKey/nanocraft/mesa/libGLESv2.so.2
+b5547000-b5556000 ---p 00007000 b3:04 450        /mnt/FunKey/nanocraft/mesa/libGLESv2.so.2
+b5556000-b5557000 r--p 00006000 b3:04 450        /mnt/FunKey/nanocraft/mesa/libGLESv2.so.2
+b5557000-b5558000 rw-p 00007000 b3:04 450        /mnt/FunKey/nanocraft/mesa/libGLESv2.so.2
+b5558000-b556f000 r-xp 00000000 b3:04 449        /mnt/FunKey/nanocraft/egl-wrap/librealEGL.so
+b556f000-b557e000 ---p 00017000 b3:04 449        /mnt/FunKey/nanocraft/egl-wrap/librealEGL.so
+b557e000-b557f000 r--p 00016000 b3:04 449        /mnt/FunKey/nanocraft/egl-wrap/librealEGL.so
+b557f000-b5580000 rw-p 00017000 b3:04 449        /mnt/FunKey/nanocraft/egl-wrap/librealEGL.so
+b5580000-b5581000 rw-p 00020000 b3:04 449        /mnt/FunKey/nanocraft/egl-wrap/librealEGL.so
+b5581000-b5584000 r-xp 00000000 b3:04 448        /mnt/FunKey/nanocraft/egl-wrap/libEGL.so.1
+b5584000-b5593000 ---p 00003000 b3:04 448        /mnt/FunKey/nanocraft/egl-wrap/libEGL.so.1
+b5593000-b5594000 r--p 00002000 b3:04 448        /mnt/FunKey/nanocraft/egl-wrap/libEGL.so.1
+b5594000-b5595000 rw-p 00003000 b3:04 448        /mnt/FunKey/nanocraft/egl-wrap/libEGL.so.1
+b5595000-b5597000 rw-p 00000000 00:00 0 
+b5597000-b5598000 rw-p 00004000 b3:04 448        /mnt/FunKey/nanocraft/egl-wrap/libEGL.so.1
+b5598000-b55b0000 r-xp 00000000 b3:04 447        /mnt/FunKey/nanocraft/runtime/libgcc_s.so.1
+b55b0000-b55bf000 ---p 00018000 b3:04 447        /mnt/FunKey/nanocraft/runtime/libgcc_s.so.1
+b55bf000-b55c0000 r--p 00017000 b3:04 447        /mnt/FunKey/nanocraft/runtime/libgcc_s.so.1
+b55c0000-b55c1000 rw-p 00018000 b3:04 447        /mnt/FunKey/nanocraft/runtime/libgcc_s.so.1
+b55c1000-b56b4000 r-xp 00000000 b3:04 446        /mnt/FunKey/nanocraft/lib/libstdc++.so.6
+b56b4000-b56c3000 ---p 000f3000 b3:04 446        /mnt/FunKey/nanocraft/lib/libstdc++.so.6
+b56c3000-b56c8000 r--p 000f2000 b3:04 446        /mnt/FunKey/nanocraft/lib/libstdc++.so.6
+b56c8000-b56ca000 rw-p 000f7000 b3:04 446        /mnt/FunKey/nanocraft/lib/libstdc++.so.6
+b56ca000-b56cc000 rw-p 00000000 00:00 0 
+b56cc000-b56e6000 r-xp 00000000 b3:04 445        /mnt/FunKey/nanocraft/lib/libtinfo.so.6
+b56e6000-b56f6000 ---p 0001a000 b3:04 445        /mnt/FunKey/nanocraft/lib/libtinfo.so.6
+b56f6000-b56f8000 r--p 0001a000 b3:04 445        /mnt/FunKey/nanocraft/lib/libtinfo.so.6
+b56f8000-b56f9000 rw-p 0001c000 b3:04 445        /mnt/FunKey/nanocraft/lib/libtinfo.so.6
+b56f9000-b570b000 r-xp 00000000 b3:04 444        /mnt/FunKey/nanocraft/lib/libz.so.1
+b570b000-b571a000 ---p 00012000 b3:04 444        /mnt/FunKey/nanocraft/lib/libz.so.1
+b571a000-b571b000 r--p 00011000 b3:04 444        /mnt/FunKey/nanocraft/lib/libz.so.1
+b571b000-b571c000 rw-p 00012000 b3:04 444        /mnt/FunKey/nanocraft/lib/libz.so.1
+b571c000-b5721000 r-xp 00000000 b3:04 443        /mnt/FunKey/nanocraft/runtime/librt.so.1
+b5721000-b5730000 ---p 00005000 b3:04 443        /mnt/FunKey/nanocraft/runtime/librt.so.1
+b5730000-b5731000 r--p 00004000 b3:04 443        /mnt/FunKey/nanocraft/runtime/librt.so.1
+b5731000-b5732000 rw-p 00005000 b3:04 443        /mnt/FunKey/nanocraft/runtime/librt.so.1
+b5732000-b575a000 r-xp 00000000 b3:04 442        /mnt/FunKey/nanocraft/mesa/libglapi.so.0
+b575a000-b5769000 ---p 00028000 b3:04 442        /mnt/FunKey/nanocraft/mesa/libglapi.so.0
+b5769000-b576d000 r--p 00027000 b3:04 442        /mnt/FunKey/nanocraft/mesa/libglapi.so.0
+b576d000-b576e000 rw-p 0002b000 b3:04 442        /mnt/FunKey/nanocraft/mesa/libglapi.so.0
+b576e000-b69c4000 r-xp 00000000 b3:04 441        /mnt/FunKey/nanocraft/gl/libGL.so.1
+b69c4000-b69d3000 ---p 01256000 b3:04 441        /mnt/FunKey/nanocraft/gl/libGL.so.1
+b69d3000-b6a82000 r--p 01255000 b3:04 441        /mnt/FunKey/nanocraft/gl/libGL.so.1
+b6a82000-b6b10000 rw-p 01304000 b3:04 441        /mnt/FunKey/nanocraft/gl/libGL.so.1
+b6b10000-b6bcd000 rw-p 00000000 00:00 0 
+b6bcd000-b6cb1000 r-xp 00000000 b3:04 435        /mnt/FunKey/nanocraft/runtime/libc.so.6
+b6cb1000-b6cc1000 ---p 000e4000 b3:04 435        /mnt/FunKey/nanocraft/runtime/libc.so.6
+b6cc1000-b6cc3000 r--p 000e4000 b3:04 435        /mnt/FunKey/nanocraft/runtime/libc.so.6
+b6cc3000-b6cc4000 rw-p 000e6000 b3:04 435        /mnt/FunKey/nanocraft/runtime/libc.so.6
+b6cc4000-b6cc7000 rw-p 00000000 00:00 0 
+b6cc7000-b6cd9000 r-xp 00000000 b3:04 434        /mnt/FunKey/nanocraft/runtime/libpthread.so.0
+b6cd9000-b6ce8000 ---p 00012000 b3:04 434        /mnt/FunKey/nanocraft/runtime/libpthread.so.0
+b6ce8000-b6ce9000 r--p 00011000 b3:04 434        /mnt/FunKey/nanocraft/runtime/libpthread.so.0
+b6ce9000-b6cea000 rw-p 00012000 b3:04 434        /mnt/FunKey/nanocraft/runtime/libpthread.so.0
+b6cea000-b6cec000 rw-p 00000000 00:00 0 
+b6cec000-b6d56000 r-xp 00000000 b3:04 433        /mnt/FunKey/nanocraft/runtime/libm.so.6
+b6d56000-b6d65000 ---p 0006a000 b3:04 433        /mnt/FunKey/nanocraft/runtime/libm.so.6
+b6d65000-b6d66000 r--p 00069000 b3:04 433        /mnt/FunKey/nanocraft/runtime/libm.so.6
+b6d66000-b6d67000 rw-p 0006a000 b3:04 433        /mnt/FunKey/nanocraft/runtime/libm.so.6
+b6d67000-b6d69000 r-xp 00000000 b3:04 432        /mnt/FunKey/nanocraft/runtime/libdl.so.2
+b6d69000-b6d78000 ---p 00002000 b3:04 432        /mnt/FunKey/nanocraft/runtime/libdl.so.2
+b6d78000-b6d79000 r--p 00001000 b3:04 432        /mnt/FunKey/nanocraft/runtime/libdl.so.2
+b6d79000-b6d7a000 rw-p 00002000 b3:04 432        /mnt/FunKey/nanocraft/runtime/libdl.so.2
+b6d7a000-b6f12000 r-xp 00000000 b3:04 396        /mnt/FunKey/nanocraft/ninecraft
+b6f12000-b6f22000 ---p 00198000 b3:04 396        /mnt/FunKey/nanocraft/ninecraft
+b6f22000-b6f25000 r--p 00198000 b3:04 396        /mnt/FunKey/nanocraft/ninecraft
+b6f25000-b6f2d000 rw-p 0019b000 b3:04 396        /mnt/FunKey/nanocraft/ninecraft
+b6f2d000-b6f49000 rw-p 00000000 00:00 0 
+b6f49000-b6f61000 r-xp 00000000 b3:04 427        /mnt/FunKey/nanocraft/runtime/ld-linux-armhf.so.3
+b6f61000-b6f62000 rw-p 00000000 00:00 0 
+b6f62000-b6f69000 r-xp 00000000 00:00 0 
+b6f69000-b6f6a000 rw-p 00000000 00:00 0 
+b6f6a000-b6f6d000 r-xp 00000000 00:00 0 
+b6f6d000-b6f71000 rw-p 00000000 00:00 0 
+b6f71000-b6f72000 r--p 00018000 b3:04 427        /mnt/FunKey/nanocraft/runtime/ld-linux-armhf.so.3
+b6f72000-b6f73000 rw-p 00019000 b3:04 427        /mnt/FunKey/nanocraft/runtime/ld-linux-armhf.so.3
+b6f73000-b77ff000 rw-p 00000000 00:00 0          [heap]
+bea4d000-bea6e000 rw-p 00000000 00:00 0          [stack]
+bec74000-bec75000 r-xp 00000000 00:00 0          [sigpage]
+bec75000-bec76000 r--p 00000000 00:00 0          [vvar]
+bec76000-bec77000 r-xp 00000000 00:00 0          [vdso]
+ffff0000-ffff1000 r-xp 00000000 00:00 0          [vectors]

@@ -1,0 +1,247 @@
+NanoCraft diagnostic report
+Generated: Sat Sep  5 17:19:36 UTC 2026
+
+This file was produced on the owner's own console by the NanoCraft
+diagnostic build. It contains hardware information and this port's own
+state. It contains no personal files, no credentials and no game content.
+Nothing was transmitted anywhere - these consoles have no networking, and
+this build contains no network code regardless. The file is yours to share
+or delete.
+
+To retrieve it: power the console off, put the SD card in a PC, and take
+nanocraft-report.txt from the root of the large data partition.
+
+-------------------------------------------------------------------
+1. CONSOLE
+-------------------------------------------------------------------
+$ uname -a
+Linux FunKey 4.14.14-funkey #1 SMP Sun Jan 18 03:17:24 CET 2026 armv7l GNU/Linux
+
+$ cat /etc/os-release
+NAME="FunKey-OS"
+VERSION="2.3.0 (Zen Zebu)"
+ID=funkey
+ID_LIKE=buildroot
+PRETTY_NAME="FunKey-OS 2.3.0"
+VERSION_ID="2.3.0"
+HOME_URL="https://www.funkey-project.com/"
+SUPPORT_URL="https://www.funkey-project.com/"
+BUG_REPORT_URL="https://www.funkey-project.com/"
+PRIVACY_POLICY_URL="https://www.funkey-project.com"
+VERSION_CODENAME=Zen
+UBUNTU_CODENAME=Zen
+
+$ cat /proc/cpuinfo
+processor	: 0
+model name	: ARMv7 Processor rev 5 (v7l)
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm 
+Hardware	: Allwinner sun8i Family
+Revision	: 0000
+
+$ cpu clock
+  (nano-clk not installed)
+
+
+-------------------------------------------------------------------
+2. MEMORY AND SWAP
+-------------------------------------------------------------------
+$ free -m
+              total        used        free      shared  buff/cache   available
+Mem:             54           7           5           0          42          43
+Swap:           127           0         127
+
+$ grep /proc/meminfo
+MemTotal:          56164 kB
+MemFree:            5240 kB
+MemAvailable:      44268 kB
+Buffers:           11416 kB
+Cached:            27328 kB
+SwapTotal:        131068 kB
+SwapFree:         131068 kB
+CommitLimit:      159148 kB
+Committed_AS:       2384 kB
+
+$ cat /proc/swaps
+Filename				Type		Size	Used	Priority
+/dev/mmcblk0p3                          partition	131068	0	-2
+
+$ vm settings
+  vm.swappiness = 60
+  vm.overcommit_memory = 0
+  vm.overcommit_ratio = 50
+  vm.min_free_kbytes = 939
+  vm.max_map_count = 65530
+
+
+-------------------------------------------------------------------
+3. STORAGE
+-------------------------------------------------------------------
+$ df -h
+Filesystem                Size      Used Available Use% Mounted on
+/dev/root               983.8M    321.3M    614.1M  34% /
+devtmpfs                 26.9M         0     26.9M   0% /dev
+tmpfs                    27.4M         0     27.4M   0% /dev/shm
+tmpfs                   128.0M     32.0K    128.0M   0% /tmp
+tmpfs                    27.4M     24.0K     27.4M   0% /run
+/dev/mmcblk0p4           57.0G    265.8M     56.7G   0% /mnt
+/dev/loop0              512.0K    512.0K         0 100% /opk
+
+$ mount (filesystem types matter: swap files do not work on vfat)
+/dev/root on / type ext4 (ro,relatime,journal_async_commit,nobarrier,commit=120,data=writeback)
+/dev/mmcblk0p4 on /mnt type vfat (rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+
+$ losetup -a
+/dev/loop0: 0 
+
+$ loop devices present
+/dev/loop-control
+/dev/loop0
+
+
+-------------------------------------------------------------------
+4. DISPLAY
+-------------------------------------------------------------------
+$ framebuffer geometry
+  virtual_size = 240,720
+  bits_per_pixel = 16
+  stride = 480
+  name = fb_st7789v
+  /dev/fb0 size = 115200 bytes
+
+
+-------------------------------------------------------------------
+5. BUTTONS
+-------------------------------------------------------------------
+This port remaps buttons at the GPIO source, so the console must expose the
+expected set. A different button layout shows up here.
+$ cat /proc/bus/input/devices
+I: Bus=6975 Vendor=706e Product=7475 Version=732d
+N: Name="ample"
+P: Phys=
+S: Sysfs=/devices/virtual/input/input0
+U: Uniq=
+H: Handlers=kbd event0 
+B: PROP=0
+B: EV=100007
+B: KEY=10000 ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff fffffffe
+B: REL=3
+
+
+$ keymap currently loaded
+CLEAR
+MAP FN       TO KEY     KEY_K
+MAP START    TO KEY     KEY_S
+MAP UP       TO KEY     KEY_U
+MAP LEFT     TO KEY     KEY_L
+MAP DOWN     TO KEY     KEY_D
+MAP RIGHT    TO KEY     KEY_R
+MAP R        TO KEY     KEY_N
+MAP L        TO KEY     KEY_M
+MAP A        TO KEY     KEY_A
+MAP B        TO KEY     KEY_B
+MAP X        TO KEY     KEY_X
+MAP Y        TO KEY     KEY_Y
+MAP MENU     TO KEY     KEY_Q
+MAP LEFT+FN  TO KEY     KEY_J
+MAP DOWN+FN  TO KEY     KEY_H
+MAP RIGHT+FN TO KEY     KEY_I
+MAP UP+FN    TO COMMAND snapshot
+MAP FN+A     TO COMMAND volume up
+MAP FN+Y     TO COMMAND volume down
+MAP FN+X     TO COMMAND brightness up
+MAP FN+B     TO COMMAND brightness down
+MAP L+FN     TO KEY     KEY_V
+MAP FN+R     TO KEY     KEY_O
+MAP L+FN+R   TO COMMAND system_stats toggle
+
+
+-------------------------------------------------------------------
+6. NANOCRAFT INSTALL
+-------------------------------------------------------------------
+$ ls /mnt/FunKey/nanocraft
+total 2080
+drwxr-xr-x   10 root     root         32768 Sep  5 17:19 .
+drwxr-xr-x    6 root     root         32768 Sep  5 17:19 ..
+drwxr-xr-x    2 root     root         32768 Sep  5 17:16 apk
+drwxr-xr-x    2 root     root         32768 Sep  1 15:49 egl-wrap
+drwxr-xr-x    6 root     root         32768 Sep  5 17:19 game081
+drwxr-xr-x    2 root     root         32768 Sep  1 15:49 gl
+drwxr-xr-x    3 root     root         32768 Sep  5 17:19 home
+-rwxr-xr-x    1 root     root           313 Sep  5 17:19 install.log
+drwxr-xr-x    2 root     root         32768 Sep  1 15:49 lib
+drwxr-xr-x    3 root     root         32768 Sep  1 15:49 mesa
+-rwxr-xr-x    1 root     root       1716432 Sep  1 15:49 ninecraft
+-rwxr-xr-x    1 root     root          1188 Sep  5 17:19 run.log
+drwxr-xr-x    2 root     root         32768 Sep  1 15:49 runtime
+
+$ identity of the shipped launcher and the user's game library
+  1716432 bytes  c1d8b4bbac349f1354c5ed76c4a168de99427dc2a57a1b8254f05255ab322db8  /mnt/FunKey/nanocraft/ninecraft
+  9668996 bytes  baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677  /mnt/FunKey/nanocraft/game081/lib/armeabi-v7a/libminecraftpe.so
+
+  reference: the tested game library is
+  9668996 bytes  baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
+
+$ install log
+Using minecraft-0.8.1.apk
+Wrapper APK detected, extracting the inner package.
+Manifest version: 0.8.1
+Installing 0.8.1 - this takes a minute and the screen will not move.
+Game library: 9668996 bytes
+sha256: baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
+
+Installed. 28.4M extracted to game081/.
+
+
+-------------------------------------------------------------------
+7. MEMORY PROBE (no game running)
+-------------------------------------------------------------------
+Can a process actually obtain a world's working set on this console?
+
+diagnose.sh: line 133: python3: not found
+
+
+-------------------------------------------------------------------
+8. GAME RUN
+-------------------------------------------------------------------
+The game now starts normally. PLAY UNTIL IT CRASHES, or quit with a long
+press on MENU if it does not. This report finishes itself afterwards.
+
+  kernel fatal-signal reporting: enabled
+  exit code: 1
+  ran for:   0 seconds
+
+$ memory held by the game just before it ended
+grep: /mnt/FunKey/nanocraft/diag-status.txt: No such file or directory
+  (not captured)
+
+$ launcher and game log
+[mem] RAM 54 MB total, 42 MB available
+[mem] this kernel is not one the bundled modules were built for:
+[mem]     4.14.14-funkey #1 SMP Sun Jan 18 03:17:24 CET 2026
+[mem]
+[mem] They are only loaded into kernels somebody has verified, because
+[mem] the loader's own check cannot tell two differently configured
+[mem] builds apart and loading into the wrong one corrupts memory
+[mem] rather than failing cleanly.
+[mem]
+[mem] NanoCraft will not start without them: a world needs about 65 MB
+[mem] of anonymous memory and this console has 54 MB of RAM.
+[mem] Please report the line above with 'uname -a' and a copy of
+[mem] /boot/zImage, and a set for your console can be built and
+[mem] audited. It needs no firmware change. See modules/README.md.
+[opk] could not set up compressed memory - see /mnt/FunKey/nanocraft/run.log
+
+
+-------------------------------------------------------------------
+9. CRASH ATTRIBUTION
+-------------------------------------------------------------------
+diagnose.sh: line 170: python3: not found
+
+$ kernel messages (tail)
+
+
+-------------------------------------------------------------------
+END OF REPORT
+-------------------------------------------------------------------
+Power off, put the SD card in a PC, and send nanocraft-report.txt from the
+root of the large data partition. A second copy is at /mnt/FunKey/nanocraft/nanocraft-report.txt.

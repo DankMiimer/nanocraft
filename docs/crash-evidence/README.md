@@ -1,9 +1,59 @@
-# The captures that identified the Play crash
+# Play used to crash on every console but mine. Here is why
 
-Taken off a factory RG Nano on 2026-09-05, from the runs that found the bug
-fixed in v1.0.7: **RakNet's LAN broadcast faulting on a console with no network
-interface.** Kept because the fix is one line and the evidence for it is not
-obvious from the fix.
+A **FunKey S** owner reported this against v1.0.0:
+
+> main menu works, options menu works, **Play crashes to desktop**
+
+It was reproduced on a factory RG Nano and fixed in v1.0.7. The cause turned out
+to have nothing to do with memory, graphics or the game files:
+
+**Pressing Play opens the world list, and 0.8.1 answers that by asking RakNet to
+broadcast for LAN games. On a console with no network interface at all, that
+faults.** The crash is a null dereference inside
+`RakNet::RakPeer::Ping(char const*, unsigned short, bool, unsigned int)`, about
+eight seconds after the button, and the console is left showing the last frame it
+drew — which reads as a freeze, because nothing repaints afterwards.
+
+It never happened here because **this console has a WiFi dongle**, added for an
+unrelated project. That single difference hid the bug through seven releases:
+every console without a network — a stock RG Nano, a FunKey S — hit it every
+time, and the one it was developed on never did.
+
+The fix is three lines in the launcher: bring up loopback before starting the
+game. `lo` exists on every kernel, costs nothing, and gives the socket layer
+something real to answer with. Nothing else was needed.
+
+## Four wrong explanations came first
+
+Memory pressure, a SIGUSR1 kill, a thread deadlock, and world generation. Each
+was wrong the same way: inferred from instrumentation that had not itself been
+verified. The specific trap was the exit code, and it is step 1 of the chain
+below.
+
+The lesson worth keeping: **`139` is a segfault and `138` was an artifact.**
+Since v1.0.7 the log says `game ended on its own, status=N` or `game closed from
+the menu`, so the two can never be confused again.
+
+## Ruled out along the way: the APK
+
+An early guess was that the reporter had a different build of 0.8.1, because
+Ninecraft reads the game's C++ objects at hard-coded byte offsets validated
+against one specific library. **That guess was wrong.** Both 0.8.1 APKs from the
+archive.org set contain a `libminecraftpe.so` byte-identical to the tested one:
+
+```text
+libminecraftpe.so   9,668,996 bytes
+sha256              baf9ca243fa301b7a9b4755ddc97aba1f0d35c9b1b80479980b47d6455a32677
+```
+
+The installer still records that size and sha256 into `install.log`, because
+ruling this out in one line is worth the second it costs.
+
+## The captures
+
+Taken off a factory RG Nano on 2026-09-05, from the runs that found the bug.
+Kept because the fix is one line and the evidence for it is not obvious from
+the fix.
 
 | File | What it is |
 |---|---|

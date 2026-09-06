@@ -78,6 +78,32 @@ Reboot, or restart the front end, then pick **NanoCraft** from Games.
 and **the screen does not move while it works** — that is normal, do not power
 off. Every launch after that goes straight to the game.
 
+## Controls
+
+The console has no second stick, so **the four face buttons are the right
+stick**, and **L is the modifier** for everything else.
+
+| Input | Action |
+| --- | --- |
+| D-pad | move |
+| X / B / Y / A | look up / down / left / right |
+| **R** | break block — also *click* in menus |
+| **L + X** | place block |
+| **L + Y** | inventory |
+| **L + A** | jump |
+| **L + B** | crouch |
+| **L + START** | start menu |
+| START | hotbar right |
+| SELECT | hotbar left |
+| **L + SELECT** | quick menu |
+| hold MENU 2 s | quit |
+
+Looking accelerates: a tap nudges the camera, holding speeds it up.
+
+**Crafting is not bound.** In this engine jump, crouch, inventory and craft all
+live on the same modifier, and `L+X` is spent on place-block. Inventory is the
+more useful of the two screens on a console this size.
+
 ## Optional settings
 
 **Resolution.** The default is 120x120, for roughly 12 fps instead of 8, at the
@@ -113,6 +139,22 @@ overrides the packaged one. Verify any edit with `keymap save`, because
 **Overclocking.** NanoCraft ships no overclock code. DrUm78's separate
 `Overclock.opk` gains about 20% everywhere with no loss of picture quality, at
 your own risk; the setting persists until reboot, so set it once and launch.
+
+## Things worth knowing
+
+**No audio.** The game runs on SDL's dummy audio driver. Sound is untested.
+
+**LAN multiplayer appears to work.** With another 0.8.1 console on the same
+wifi, its world showed up in the list. Not tested beyond that, and not a feature
+claim.
+
+**A frozen picture usually means the game exited**, not that it hung — nothing
+else redraws the screen afterwards.
+
+**FORCE CLOSE is named for what it does.** It sends `SIGTERM` and then
+`SIGKILL`, so anything since Minecraft's last autosave is lost. To quit with a
+save, use the game's own pause menu (**L + START**) and leave the world from
+there. RESTART and SHUTDOWN close the game the same way.
 
 ## If something goes wrong
 

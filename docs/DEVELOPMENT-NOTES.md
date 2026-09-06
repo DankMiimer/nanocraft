@@ -1,6 +1,6 @@
 # Pocket Edition 0.8.1 on the RG Nano — session handoff
 
-Written 2026-09-01. Read [PE081-NANO.md](PE081-NANO.md) first for the port
+Written 2026-09-01. Read [PE081-NANO.md](PORTING.md) first for the port
 itself; this is the working state, the open bugs and the traps that cost time.
 
 **No Minecraft files are in this repository and none ever will be.** The game

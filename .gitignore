@@ -4,7 +4,11 @@
 *libminecraftpe*
 game*/
 home/
-release/
+# The release archives and the payload are large and rebuildable. The scripts
+# that assemble them are neither, and they carry the check that keeps a release
+# from shipping a runtime its own launcher does not match - see release/.
+release/*
+!release/*.sh
 out*/
 *.raw
 *.log

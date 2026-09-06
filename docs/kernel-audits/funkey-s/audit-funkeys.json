@@ -1,11 +1,9 @@
 {
-  "kernel": "4.14.14-funkey #1 SMP Sun Jan 18 03:45:29 CET 2026",
-  "console": "FunKey S, FunKey-OS 2.3.0 - issue #2, badcats72",
-  "image": "nanocraft-kernel.zImage, LZO payload at offset 6814, vmlinux 9662464 bytes",
-  "build_string": "gcc 10.2.0 (Buildroot 2020.11-341-g1f59bd3b48), same builder and day as the verified kernel",
-  "exports_rgnano_factory": 6749,
-  "exports_funkey_s": 6722,
-  "exports_only_in_rgnano": [
+  "reference": "vmlinux",
+  "candidate": "vmlinux",
+  "exports_reference": 6749,
+  "exports_candidate": 6722,
+  "exports_only_in_reference": [
     "__snd_rawmidi_transmit_ack",
     "__snd_rawmidi_transmit_peek",
     "__snd_usbmidi_create",
@@ -34,7 +32,7 @@
     "snd_usbmidi_resume",
     "snd_usbmidi_suspend"
   ],
-  "exports_only_in_funkey_s": [],
+  "exports_only_in_candidate": [],
   "modules": {
     "lz4.ko": {
       "imports": 8,
@@ -57,5 +55,5 @@
       "unresolved": []
     }
   },
-  "verdict": "all imports resolve; the tester's kernel exports nothing the verified one does not"
+  "verdict": "all imports resolve; the candidate exports nothing the reference does not"
 }

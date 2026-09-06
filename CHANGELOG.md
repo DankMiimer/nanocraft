@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Publish `release/build-archive.sh`, `release/build-payload.sh` and
+  `release/verify-opk.sh`. The archive's two halves are the OPK and the payload
+  the game lives in; v1.0.10 shipped them mismatched because only one was ever
+  rebuilt, and the check that now prevents that is in the first of those
+  scripts. Asserting the guard exists while keeping it out of the repository was
+  the wrong way round.
+- Make the kernel-audit tooling in `docs/kernel-audits/` reusable: it takes the
+  two kernel images and the module directory as arguments instead of hardcoding
+  one machine's paths, so the next console to report can be checked with it.
+  `extract-kernel.sh` no longer judges the decompression by lzop's exit status,
+  which is non-zero on a successful extraction because the payload is followed
+  by the rest of the image.
+
 ## v1.0.12 — a console that only needed listing
 
 - Support the factory **FunKey S** kernel, `4.14.14-funkey #1 SMP Sun Jan 18

@@ -62,6 +62,22 @@ match inside a real section splits it and starts inventing gaps —
   identically by both kernels. That is the risk the whitelist exists for, and it
   is the closest thing to a config diff available with `CONFIG_IKCONFIG` off.
 
+## Reproducing it
+
+The three scripts take their inputs as arguments, so the next console to report
+can be checked the same way:
+
+```sh
+./extract-kernel.sh nanocraft-kernel.zImage /tmp/theirs
+./audit-funkeys.py <reference-vmlinux> /tmp/theirs/vmlinux -o audit.json
+./check-layout-markers.py audit.json
+```
+
+The reference is a decompressed image of a kernel already on the list. The
+module directory defaults to the `smp` set beside them. `check-layout-markers.py`
+exits non-zero if any option that would move a struct these modules touch
+differs, which is the one result that should stop a kernel being listed.
+
 ## What this does and does not establish
 
 It establishes that the modules will **load**, and that no configuration

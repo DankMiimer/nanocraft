@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.12 — a console that only needed listing
 
 - Support the factory **FunKey S** kernel, `4.14.14-funkey #1 SMP Sun Jan 18
   03:45:29 CET 2026`. A tester sent the kernel image the launcher had written

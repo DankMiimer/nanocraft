@@ -56,10 +56,11 @@
 #   - every config option that would move struct page, a spinlock, a zone or
 #     the allocator is exported identically by both.
 #
-# See docs/kernel-audits/funkey-s/. What has NOT happened is somebody watching
-# it run, which is the bar slot 1 above is still waiting on. It is listed
-# anyway, because the person who reported it cannot verify it while the
-# launcher refuses to load anything - and they are the one console that can.
+# See docs/kernel-audits/funkey-s/. It was listed on the audit alone, because
+# the reporter could not verify it while the launcher refused to load anything.
+# CONFIRMED RUNNING on 2026-09-06 by badcats72, the reporter, on v1.0.12 - so
+# this entry now meets the same bar as the RG Nano one above, and slot 1 is
+# again the only build here on paper alone.
 4.14.14-funkey #1 SMP Sun Jan 18 03:45:29 CET 2026|smp
 
 # The console this port was developed on: a custom build, uniprocessor.

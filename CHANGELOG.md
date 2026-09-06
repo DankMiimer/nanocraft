@@ -27,9 +27,10 @@
   identically by both. Nothing was rebuilt — the existing set is correct for it.
   Audit and method in [docs/kernel-audits/funkey-s/](docs/kernel-audits/funkey-s/).
 
-  Nobody has yet watched it run, which is the bar the card image's slot 1 is
-  still waiting on. It is listed anyway: the person who reported it cannot
-  verify it while the launcher refuses to load anything.
+  It was listed on the audit alone, since the reporter could not verify it while
+  the launcher refused to load anything into their kernel. **Confirmed running
+  the same day** by badcats72 on their own FunKey S — so the prediction was made
+  first and checked second.
 
 ## v1.0.11 — the interface at the screen's real resolution
 

@@ -1,6 +1,6 @@
 # NanoCraft
 
-**Minecraft Pocket Edition 0.8.1 on the Anbernic RG Nano.**
+**Minecraft Pocket Edition 0.8.1 on the Anbernic RG Nano — and, since v1.0.12, on the FunKey S.**
 
 ![Minecraft Pocket Edition running on an RG Nano: a grass field with a tree, a
 chest and furnaces, hearts and a full hotbar, on the console's square 240x240
@@ -164,9 +164,22 @@ regardless. If the console locks up, power-cycle it and pick a lower step.
 
 ## What you need
 
-- An **Anbernic RG Nano** running DrUm78's FunKey-OS build.
+- An **Anbernic RG Nano** or a **FunKey S**, running DrUm78's FunKey-OS build.
 - About **300 MB free** on the card.
 - **Your own Pocket Edition 0.8.1 APK**, 32-bit `armeabi-v7a`.
+
+The two consoles are close relatives and the same package serves both. Every
+performance figure below was measured on an RG Nano; the FunKey S has the same
+SoC and the same amount of RAM, so expect the same, but nobody has measured it.
+
+**If NanoCraft refuses to start**, it is almost certainly because your kernel is
+not one the compressed-memory modules have been checked against — they are only
+loaded into builds somebody has verified, since the loader's own test cannot
+tell two differently configured kernels apart. The launcher writes
+`nanocraft-kernel.txt` to the root of your card when that happens; send it and
+your console can be added. That is exactly how the FunKey S came to be
+supported, and it needed no new modules at all — only checking. The working is
+published in [docs/kernel-audits/](docs/kernel-audits/).
 
 ## Play used to crash on every console but mine. Here is why
 

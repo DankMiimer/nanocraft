@@ -82,19 +82,24 @@ differs, which is the one result that should stop a kernel being listed.
 
 It establishes that the modules will **load**, and that no configuration
 difference detectable from the outside touches the memory internals they reach
-into. It does not establish that anybody has watched it run, which is the bar
-slot 1 of the card image is still waiting on.
+into. It did not, on its own, establish that anybody had watched it run.
 
-It is whitelisted anyway, and the comment in `opk/modules/kernels` says why: the
-person who reported it cannot verify it while the launcher refuses to load
-anything, and theirs is the only console in the world that can.
+**It has now.** badcats72 confirmed on 2026-09-06, a few hours after v1.0.12
+went out, that NanoCraft starts and plays on their FunKey S. The audit was
+listed on its own merits before that, because the reporter could not verify it
+while the launcher refused to load anything into their kernel - so the
+prediction was made first and checked second, which is the useful order.
 
-## What to expect if it works
+The method is therefore worth reusing rather than treating as a one-off: an
+export-table comparison plus a layout-marker check was enough to add a console
+sight unseen, and it was right.
+
+## What happened when it ran
 
 Their report's memory probe already passed on this console — it allocated 80 MB
 and touched every page — because a FunKey S has a 128 MB swap partition its
 firmware enables. NanoCraft disables that partition once zram is up, by design,
 so the working set will be coming from compressed memory, exactly as on the
-RG Nano. If it starts, they should also get past **Play**, which crashed for
-them on v1.0.0 and v1.0.5: that was RakNet's LAN broadcast faulting with no
-network interface, fixed in v1.0.7.
+RG Nano. They also got past **Play**, which had crashed for them on v1.0.0 and
+v1.0.5 - that was RakNet's LAN broadcast faulting with no network interface,
+fixed in v1.0.7, and they had never had a build that got far enough to reach it.

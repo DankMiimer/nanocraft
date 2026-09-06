@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.13 — the game's own icon, if you want it
 
 - Add an opt-in front-end icon taken from your own installed game, on a
   **GAME ICON** row in Quick Settings — the settings page goes to eight rows,

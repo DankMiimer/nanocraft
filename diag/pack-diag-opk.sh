@@ -21,7 +21,7 @@ OUT=$HOME/$NAME.opk
 
 # The game half must be byte-identical to the shipping package, or the
 # diagnostic would be measuring something the tester does not actually run.
-GAME_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh"
+GAME_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh game-icon.sh"
 GAME_DATA="minecraft.key menubg.raw videobg.raw res240.raw res120.raw
            gsauto.raw gsfit.raw gsstock.raw
            fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw

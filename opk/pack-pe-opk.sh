@@ -38,7 +38,7 @@ STAGE=$(mktemp -d "${TMPDIR:-/tmp}/nanocraft-opk.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT
 OUT="${1:-$SRC/../$NAME.opk}"
 
-PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh"
+PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh game-icon.sh"
 PAYLOAD_PY=""
 PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
               nanocraft.png nanocraft.funkey-s.desktop

@@ -87,6 +87,13 @@ if [ ! -f "$GAMEOPTS" ]; then
   echo "[opk] seeded performance options for a fresh install" >> "$LOG"
 fi
 
+# The front-end icon, if the owner asked for the game's own. Off unless
+# game-icon.txt says 1, reversible, and it copies out of the game they supplied
+# rather than out of anything this port ships - see game-icon.sh for why that
+# distinction is the whole point. Cheap enough to check on every launch: two
+# file reads when it has nothing to do.
+sh "$APP_DIR/game-icon.sh" "$DATA" >> "$LOG" 2>&1
+
 # --- memory ------------------------------------------------------------------
 # A world needs about 65 MB of anonymous memory (measured: 28 MB resident plus
 # 37 MB swapped) on a console with 56 MB of RAM. ensure-memory.sh closes that

@@ -140,6 +140,30 @@ overrides the packaged one. Verify any edit with `keymap save`, because
 `Overclock.opk` gains about 20% everywhere with no loss of picture quality, at
 your own risk; the setting persists until reboot, so set it once and launch.
 
+**The game's own icon in the front end.** Off by default. Turn it on with a
+file on the card:
+
+```sh
+echo 1 > /mnt/FunKey/nanocraft/game-icon.txt
+```
+
+Next launch, the front-end artwork beside the `.opk` is replaced with the
+launcher icon out of **your own installed game**, and `echo 0` (or deleting the
+file) puts the shipped icon back — the original is kept at
+`/mnt/FunKey/nanocraft/icon-original.png`.
+
+It is off by default, and shipped separately from the artwork, for a reason
+worth stating: that icon is Mojang's artwork and their trademark. Including it
+in the download would mean this project distributing their art and using their
+logo as its own identity. Copying it on your console, out of a game you own and
+installed yourself, is a different act — nothing is distributed and it stays on
+your card. That is the same principle as the rest of the port: you supply the
+game, it is unpacked on your device.
+
+Only front ends that read that file see it — RetroFE, the default here, does.
+The icon inside the `.opk` cannot be changed on the console at all, so gmenu2x
+keeps showing the shipped one.
+
 ## Things worth knowing
 
 **No audio.** The game runs on SDL's dummy audio driver. Sound is untested.

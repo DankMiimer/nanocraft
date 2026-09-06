@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add an opt-in front-end icon taken from your own installed game.
+  `echo 1 > /mnt/FunKey/nanocraft/game-icon.txt`; `0` or deleting it restores
+  the shipped icon, which is kept beside the game first. **Nothing new is
+  distributed**: the artwork is Mojang's and their trademark, so it stays out of
+  the download and is copied on the console, out of the APK the owner supplied.
+  Only front ends that read the artwork beside the `.opk` show it — the icon
+  inside a read-only squashfs cannot be changed on the device.
+
 - Publish `release/build-archive.sh`, `release/build-payload.sh` and
   `release/verify-opk.sh`. The archive's two halves are the OPK and the payload
   the game lives in; v1.0.10 shipped them mismatched because only one was ever

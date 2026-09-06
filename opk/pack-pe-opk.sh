@@ -42,7 +42,7 @@ PAYLOAD_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory
 PAYLOAD_PY=""
 PAYLOAD_DATA="minecraft.key menubg.raw videobg.raw
               nanocraft.png nanocraft.funkey-s.desktop
-              res240.raw res120.raw
+              res240.raw res120.raw iconon.raw iconoff.raw
               gsauto.raw gsfit.raw gsstock.raw
               fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw
               capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw cap20.raw cap25.raw cap30.raw
@@ -139,7 +139,7 @@ done
 # Every value strip the quick menu can blit must be present and whole. A missing
 # one would leave the CPU or screen row blank at exactly the moment someone is
 # trying to read what it is set to.
-for f in res240.raw res120.raw gsauto.raw gsfit.raw gsstock.raw \
+for f in res240.raw res120.raw iconon.raw iconoff.raw gsauto.raw gsfit.raw gsstock.raw \
          fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw \
          capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw cap20.raw cap25.raw cap30.raw \
          cpu1008.raw cpu1056.raw cpu1104.raw \

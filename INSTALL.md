@@ -140,16 +140,13 @@ overrides the packaged one. Verify any edit with `keymap save`, because
 `Overclock.opk` gains about 20% everywhere with no loss of picture quality, at
 your own risk; the setting persists until reboot, so set it once and launch.
 
-**The game's own icon in the front end.** Off by default. Turn it on with a
-file on the card:
-
-```sh
-echo 1 > /mnt/FunKey/nanocraft/game-icon.txt
-```
+**The game's own icon in the front end.** Off by default. **L + SELECT →
+SETTINGS → GAME ICON**, then right for ON and left for OFF; on the card it is
+`/mnt/FunKey/nanocraft/game-icon.txt`, holding `1` or `0`.
 
 Next launch, the front-end artwork beside the `.opk` is replaced with the
-launcher icon out of **your own installed game**, and `echo 0` (or deleting the
-file) puts the shipped icon back — the original is kept at
+launcher icon out of **your own installed game**. Turning it off puts the
+shipped icon back — the original is kept at
 `/mnt/FunKey/nanocraft/icon-original.png`.
 
 It is off by default, and shipped separately from the artwork, for a reason

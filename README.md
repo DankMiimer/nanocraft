@@ -74,8 +74,9 @@ Full map in [INSTALL.md](INSTALL.md).
 ![The NanoCraft quick menu: volume and brightness bars, close game, shutdown and
 resume.](docs/img/quick-menu.png)
 
-**L + SELECT** for volume, brightness, CPU clock, resolution, field of view and
-camera and cursor sensitivity. It exists because on this OS the power menu is
+**L + SELECT** for volume, brightness, CPU clock, resolution, field of view,
+camera and cursor sensitivity, and whether the front end shows the game's own
+icon. It exists because on this OS the power menu is
 drawn by whatever app is in the foreground, so a game either provides one or you
 get nothing.
 

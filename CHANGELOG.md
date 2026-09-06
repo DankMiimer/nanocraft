@@ -2,9 +2,11 @@
 
 ## Unreleased
 
-- Add an opt-in front-end icon taken from your own installed game.
-  `echo 1 > /mnt/FunKey/nanocraft/game-icon.txt`; `0` or deleting it restores
-  the shipped icon, which is kept beside the game first. **Nothing new is
+- Add an opt-in front-end icon taken from your own installed game, on a
+  **GAME ICON** row in Quick Settings — the settings page goes to eight rows,
+  which is the whole page, so its two legend lines merge into one. Off by
+  default; turning it off restores the shipped icon, which is kept beside the
+  game first. **Nothing new is
   distributed**: the artwork is Mojang's and their trademark, so it stays out of
   the download and is copied on the console, out of the APK the owner supplied.
   Only front ends that read the artwork beside the `.opk` show it — the icon

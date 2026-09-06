@@ -23,6 +23,7 @@ OUT=$HOME/$NAME.opk
 # diagnostic would be measuring something the tester does not actually run.
 GAME_SCRIPTS="run.sh launch-pe-nano.sh install-apk.sh pemenu.sh ensure-memory.sh game-icon.sh"
 GAME_DATA="minecraft.key menubg.raw videobg.raw res240.raw res120.raw
+           iconon.raw iconoff.raw
            gsauto.raw gsfit.raw gsstock.raw
            fov50.raw fov60.raw fov70.raw fov80.raw fov90.raw fov100.raw
            capoff.raw cap6.raw cap8.raw cap10.raw cap12.raw cap15.raw cap20.raw cap25.raw cap30.raw

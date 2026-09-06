@@ -66,7 +66,7 @@ enum { K_UP = 103, K_DOWN = 108, K_LEFT = 105, K_RIGHT = 106, K_A = 57, K_B = 29
  * lost. Quitting through the game's own pause menu (L+START) saves first. */
 enum { VOLUME, BRIGHT, CPU, VIDEO, RESTART, CLOSE, SHUTDOWN, RESUME };
 /* The video page, reached from the VIDEO row. */
-enum { V_SCREEN, V_GUISCALE, V_FOV, V_CAP, V_CAMERA, V_CURSOR, V_BACK };
+enum { V_SCREEN, V_GUISCALE, V_FOV, V_CAP, V_CAMERA, V_CURSOR, V_ICON, V_BACK };
 enum { PAGE_MAIN, PAGE_VIDEO };
 static const int PAGE_ROWS[2] = { 8, 7 };
 
@@ -620,6 +620,7 @@ struct assets {
     unsigned char *fov[6];
     unsigned char *cap[N_CAPS];
     unsigned char *sensitivity[NC_SENS_COUNT];
+    unsigned char *icon[2];      /* front-end icon: shipped, or the game's own */
 };
 
 static void load_assets(struct assets *a)
@@ -629,6 +630,8 @@ static void load_assets(struct assets *a)
 
     a->bg[0] = load_raw("menubg.raw", FBSIZE);
     a->bg[1] = load_raw("videobg.raw", FBSIZE);
+    a->icon[0] = load_raw("iconoff.raw", STRIP_BYTES);
+    a->icon[1] = load_raw("iconon.raw", STRIP_BYTES);
     for (i = 0; i < NC_SENS_COUNT; i++) {
         snprintf(name, sizeof name, "sens%d.raw", NC_SENS_MIN + i * NC_SENS_STEP);
         a->sensitivity[i] = load_raw(name, STRIP_BYTES);
@@ -661,7 +664,7 @@ static void load_assets(struct assets *a)
  * driver's deferred IO rather than by us. */
 static void draw(const struct assets *a, int page, int sel, int vol, int bri,
                  int clock_mhz, int size_i, int gs_i, int fov_i, int cap_i,
-                 nc_sensitivity sensitivity)
+                 int icon_i, nc_sensitivity sensitivity)
 {
     int vy = (ROW_H - VAL_H) / 2;
 
@@ -679,6 +682,7 @@ static void draw(const struct assets *a, int page, int sel, int vol, int bri,
         blit(a->gs[gs_i], VAL_X, ROW_TOP[V_GUISCALE] + vy, VAL_W, VAL_H);
         blit(a->fov[fov_i], VAL_X, ROW_TOP[V_FOV] + vy, VAL_W, VAL_H);
         blit(a->cap[cap_i], VAL_X, ROW_TOP[V_CAP] + vy, VAL_W, VAL_H);
+        blit(a->icon[icon_i], VAL_X, ROW_TOP[V_ICON] + vy, VAL_W, VAL_H);
         int values[2] = { sensitivity.camera, sensitivity.cursor };
         for (int i = 0; i < 2; i++) {
             int row = V_CAMERA + i;
@@ -706,7 +710,7 @@ int main(int argc, char **argv)
     const char *dev, *env;
     int page = PAGE_MAIN, sel = RESUME;
     int vol, bri, clock_mhz;
-    int size_i, gs_i, fov_i, cap_i;
+    int size_i, gs_i, fov_i, cap_i, icon_i;
     nc_sensitivity sensitivity;
     int fd, grabbed = 0, action = 0, running = 1;
 
@@ -744,6 +748,11 @@ int main(int argc, char **argv)
                      DEFAULT_FOV_INDEX);
     cap_i = index_of(CAPS, N_CAPS, read_first_int("fpscap.txt", CAPS[DEFAULT_CAP_INDEX]),
                      DEFAULT_CAP_INDEX);
+    /* Off unless the card says otherwise: this one puts the game's own artwork
+     * on the front end, and that has to be the owner's choice rather than
+     * something a release decides for them. game-icon.sh does the work at the
+     * next launch; this row only records the answer. */
+    icon_i = read_first_int("game-icon.txt", 0) ? 1 : 0;
     clock_mhz = read_clock();
 
     if (fb_open() < 0)
@@ -773,7 +782,8 @@ int main(int argc, char **argv)
     }
     drain(fd);
 
-    draw(&a, page, sel, vol, bri, clock_mhz, size_i, gs_i, fov_i, cap_i, sensitivity);
+    draw(&a, page, sel, vol, bri, clock_mhz, size_i, gs_i, fov_i, cap_i, icon_i,
+         sensitivity);
 
     while (running) {
         struct pollfd p = { fd, POLLIN, 0 };
@@ -835,6 +845,13 @@ int main(int argc, char **argv)
                         if (*value > NC_SENS_MAX) *value = NC_SENS_MAX;
                         if (write_sensitivity(next) == 0) sensitivity = next;
                         else fprintf(stderr, "[quickmenu] could not save sensitivity\n");
+                        dirty = 1;
+                    } else if (sel == V_ICON) {
+                        /* Two states, so the direction sets it rather than
+                         * flipping it: right is ON and left is OFF, and holding
+                         * one way cannot walk it back off again. */
+                        icon_i = dir > 0;
+                        write_int_setting("game-icon.txt", icon_i);
                         dirty = 1;
                     } else if (sel == V_CAP) {
                         cap_i += dir;              /* same clamped ladder */
@@ -903,7 +920,8 @@ int main(int argc, char **argv)
             }
         }
         if (running && dirty)
-            draw(&a, page, sel, vol, bri, clock_mhz, size_i, gs_i, fov_i, cap_i, sensitivity);
+            draw(&a, page, sel, vol, bri, clock_mhz, size_i, gs_i, fov_i, cap_i, icon_i,
+         sensitivity);
     }
 
     if (grabbed)

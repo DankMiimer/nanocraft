@@ -39,10 +39,14 @@ ffmpeg -y -hide_banner -loglevel error -i menubg.png -f rawvideo -pix_fmt rgb565
 
 # --- the video page -----------------------------------------------------------
 # Same row geometry, so quickmenu.py blits values and draws the cursor with the
-# identical arithmetic and only the background changes. Four rows, then a
-# legend, because AUTO/FIT/STOCK say nothing on their own and a bare 70 does not
-# say it is the stock angle -- and the footer that used to sit under SCREEN on
-# the main page, now covering every setting here.
+# identical arithmetic and only the background changes. EIGHT rows now, which is
+# the whole page: ROW_TOP ends at 202 and a label sits four pixels into its row,
+# so BACK is at y=206 and one line of room is left underneath.
+#
+# That is why the two legend lines became one, at nine point instead of ten.
+# They earn the space: AUTO/FIT/STOCK say nothing on their own, a bare 70 does
+# not say it is the stock angle, and which settings need a restart is not
+# guessable from the rows themselves.
 ffmpeg -y -hide_banner -loglevel error -f lavfi -i "color=c=0x101822:s=240x240" -vf "\
 drawbox=x=0:y=0:w=240:h=28:color=0x2a3550:t=fill,\
 drawtext=fontfile=menufont.ttf:text='QUICK SETTINGS':fontcolor=0xE8E8E8:fontsize=15:x=(w-text_w)/2:y=6,\
@@ -52,9 +56,9 @@ drawtext=fontfile=menufont.ttf:text='FOV':fontcolor=0xE8E8E8:fontsize=12:x=16:y=
 drawtext=fontfile=menufont.ttf:text='FPS CAP':fontcolor=0xE8E8E8:fontsize=12:x=16:y=110,\
 drawtext=fontfile=menufont.ttf:text='CAMERA':fontcolor=0xE8E8E8:fontsize=12:x=16:y=134,\
 drawtext=fontfile=menufont.ttf:text='CURSOR':fontcolor=0xE8E8E8:fontsize=12:x=16:y=158,\
-drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=182,\
-drawtext=fontfile=menufont.ttf:text='camera / cursor apply on resume':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=208,\
-drawtext=fontfile=menufont.ttf:text='video changes need a restart':fontcolor=0x7C8AA8:fontsize=10:x=(w-text_w)/2:y=226" \
+drawtext=fontfile=menufont.ttf:text='GAME ICON':fontcolor=0xE8E8E8:fontsize=12:x=16:y=182,\
+drawtext=fontfile=menufont.ttf:text='BACK':fontcolor=0xE8E8E8:fontsize=12:x=16:y=206,\
+drawtext=fontfile=menufont.ttf:text='video needs a restart - camera/cursor on resume':fontcolor=0x7C8AA8:fontsize=9:x=(w-text_w)/2:y=228" \
   -frames:v 1 videobg.png
 ffmpeg -y -hide_banner -loglevel error -i videobg.png -f rawvideo -pix_fmt rgb565le videobg.raw
 
@@ -69,6 +73,11 @@ strip() {   # strip <outname> <text> <colour>
 
 strip res240 "240x240" 0xF0C460
 strip res120 "120x120" 0xF0C460
+
+# GAME ICON. Deliberately not the bright value colour: this row changes what
+# the front end shows, not how the game runs, and OFF is the shipped default.
+strip iconoff "OFF" 0x9AA8C0
+strip iconon  "ON"  0xF0C460
 
 for s in $(seq 10 10 200); do
   strip "sens$s" "${s}%" 0xF0C460
@@ -111,6 +120,6 @@ done
 for f in menubg.raw videobg.raw; do
   echo "wrote $f ($(wc -c < "$f") bytes, expect 115200)"
 done
-for f in res*.raw gs*.raw fov*.raw cap*.raw cpu*.raw sens*.raw; do
+for f in res*.raw gs*.raw fov*.raw cap*.raw cpu*.raw sens*.raw icon*.raw; do
   echo "  $f $(wc -c < "$f") bytes (expect $((76 * 18 * 2)))"
 done

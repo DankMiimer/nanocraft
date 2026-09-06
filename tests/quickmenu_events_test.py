@@ -65,8 +65,47 @@ with tempfile.TemporaryDirectory(prefix="nanocraft-menu-") as td:
         press(DOWN); press(RIGHT); assert saved() == "100 30"
         capture(fb, "quick-settings-adjusted.png")
         assert not (data / "sensitivity.txt.tmp").exists()
+
+        # GAME ICON, one row below CURSOR. Off unless the card says so, and the
+        # direction SETS it rather than flipping it - pressing right twice must
+        # not walk it back off.
+        def icon():
+            f = data / "game-icon.txt"
+            return f.read_text().strip() if f.exists() else "(absent)"
+
+        def icon_strip():
+            # The 76x18 value strip for this row, straight out of the
+            # framebuffer. Comparing pixels is what distinguishes "the row was
+            # drawn from the saved setting" from "the file happens to say 1".
+            raw = fb.read_bytes()
+            return b"".join(raw[(y * 240 + 140) * 2:(y * 240 + 140) * 2 + 76 * 2]
+                            for y in range(180, 198))
+
+        assert icon() == "(absent)", icon()
+        press(DOWN)                       # CURSOR -> GAME ICON
+        press(RIGHT); assert icon() == "1", icon()
+        on_pixels = icon_strip()
+        press(RIGHT); assert icon() == "1", icon()
+        press(LEFT);  assert icon() == "0", icon()
+        off_pixels = icon_strip()
+        assert on_pixels != off_pixels, "ON and OFF draw the same strip"
+        press(LEFT);  assert icon() == "0", icon()
+        press(RIGHT); assert icon() == "1", icon()
+        assert icon_strip() == on_pixels
+        capture(fb, "quick-settings-game-icon.png")
         press(B); press(B)
         assert proc.wait(timeout=3) == 0
+
+        # A fresh menu must come up already showing ON, which only happens if it
+        # read game-icon.txt at startup.
+        proc = subprocess.Popen([str(assets / "menu-test"), "--menu"], env=env)
+        time.sleep(.3)
+        press(UP, 4); press(A); press(DOWN, 6)
+        assert icon_strip() == on_pixels, "the row did not load its saved state"
+        press(LEFT); assert icon() == "0", icon()
+        press(B); press(B)
+        assert proc.wait(timeout=3) == 0
+
         # A fresh invocation reads the persisted pair.
         proc = subprocess.Popen([str(assets / "menu-test"), "--menu"], env=env)
         time.sleep(.3)
@@ -79,4 +118,4 @@ with tempfile.TemporaryDirectory(prefix="nanocraft-menu-") as td:
         if proc.poll() is None:
             proc.terminate()
             proc.wait(timeout=3)
-print("PASS: menu navigation, separate sliders, min/max clamps, save, back/resume, relaunch persistence")
+print("PASS: menu navigation, separate sliders, clamps, save, back/resume, relaunch persistence, and the GAME ICON row")

@@ -1,0 +1,61 @@
+{
+  "kernel": "4.14.14-funkey #1 SMP Sun Jan 18 03:45:29 CET 2026",
+  "console": "FunKey S, FunKey-OS 2.3.0 - issue #2, badcats72",
+  "image": "nanocraft-kernel.zImage, LZO payload at offset 6814, vmlinux 9662464 bytes",
+  "build_string": "gcc 10.2.0 (Buildroot 2020.11-341-g1f59bd3b48), same builder and day as the verified kernel",
+  "exports_rgnano_factory": 6749,
+  "exports_funkey_s": 6722,
+  "exports_only_in_rgnano": [
+    "__snd_rawmidi_transmit_ack",
+    "__snd_rawmidi_transmit_peek",
+    "__snd_usbmidi_create",
+    "musb_root_disconnect",
+    "snd_hwdep_new",
+    "snd_rawmidi_drain_input",
+    "snd_rawmidi_drain_output",
+    "snd_rawmidi_drop_output",
+    "snd_rawmidi_info_select",
+    "snd_rawmidi_input_params",
+    "snd_rawmidi_kernel_open",
+    "snd_rawmidi_kernel_read",
+    "snd_rawmidi_kernel_release",
+    "snd_rawmidi_kernel_write",
+    "snd_rawmidi_new",
+    "snd_rawmidi_output_params",
+    "snd_rawmidi_receive",
+    "snd_rawmidi_set_ops",
+    "snd_rawmidi_transmit",
+    "snd_rawmidi_transmit_ack",
+    "snd_rawmidi_transmit_empty",
+    "snd_rawmidi_transmit_peek",
+    "snd_usbmidi_disconnect",
+    "snd_usbmidi_input_start",
+    "snd_usbmidi_input_stop",
+    "snd_usbmidi_resume",
+    "snd_usbmidi_suspend"
+  ],
+  "exports_only_in_funkey_s": [],
+  "modules": {
+    "lz4.ko": {
+      "imports": 8,
+      "unresolved": []
+    },
+    "lz4_compress.ko": {
+      "imports": 3,
+      "unresolved": []
+    },
+    "lz4_decompress.ko": {
+      "imports": 2,
+      "unresolved": []
+    },
+    "zram.ko": {
+      "imports": 94,
+      "unresolved": []
+    },
+    "zsmalloc.ko": {
+      "imports": 51,
+      "unresolved": []
+    }
+  },
+  "verdict": "all imports resolve; the tester's kernel exports nothing the verified one does not"
+}

@@ -25,6 +25,13 @@ A module from the wrong set is refused by the loader, so one set cannot serve
 both. `kernels` says which build gets which, and the launcher picks from it.
 About 100 KB per set.
 
+The factory **FunKey S** kernel takes the `smp` set as well. It is a third build
+of the same source, 28 minutes after the RG Nano's, and the set was audited
+against the image a tester sent rather than assumed to fit: every symbol the
+modules import resolves, its export table is a strict subset of the RG Nano
+kernel's, and the 27 exports it lacks are all USB MIDI and USB host. See
+`../../docs/kernel-audits/funkey-s/`.
+
 ## Source
 
 **Unmodified Linux 4.14.14**, from kernel.org. No patches. Each set's `kernel.config` is the exact

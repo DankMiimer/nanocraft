@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- Support the factory **FunKey S** kernel, `4.14.14-funkey #1 SMP Sun Jan 18
+  03:45:29 CET 2026`. A tester sent the kernel image the launcher had written
+  for them, and the `smp` module set was audited against it: all 158 undefined
+  symbols across the five modules resolve; its export table is a strict subset
+  of the RG Nano kernel's, differing only in 27 USB MIDI and USB host symbols
+  that zram, zsmalloc and lz4 do not touch; and every config option that would
+  move `struct page`, a spinlock, a zone or the allocator is exported
+  identically by both. Nothing was rebuilt — the existing set is correct for it.
+  Audit and method in [docs/kernel-audits/funkey-s/](docs/kernel-audits/funkey-s/).
+
+  Nobody has yet watched it run, which is the bar the card image's slot 1 is
+  still waiting on. It is listed anyway: the person who reported it cannot
+  verify it while the launcher refuses to load anything.
+
 ## v1.0.11 — the interface at the screen's real resolution
 
 - Render the world at 120x120 and the interface at the panel's real 240x240.

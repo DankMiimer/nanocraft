@@ -39,5 +39,28 @@
 # seen running it, so it stays off the list until something is.
 4.14.14-funkey #1 SMP Sun Jan 18 03:17:24 CET 2026|smp
 
+# Factory FunKey S, FunKey-OS 2.3.0. Reported in issue #2 by badcats72, who
+# sent the kernel image this was audited against.
+#
+# A THIRD build of the same source, 44 minutes after the RG Nano's: same
+# compiler, same Buildroot revision, same builder, same day. Audited from their
+# own zImage rather than assumed:
+#
+#   - all 158 undefined symbols across the five modules resolve against its
+#     export table;
+#   - its export table is a strict SUBSET of the verified RG Nano kernel's -
+#     nothing is exported here that is not exported there;
+#   - the 27 exports it lacks are all USB MIDI and USB host
+#     (snd_rawmidi_*, snd_usbmidi_*, musb_root_disconnect), which zram,
+#     zsmalloc and lz4 do not touch;
+#   - every config option that would move struct page, a spinlock, a zone or
+#     the allocator is exported identically by both.
+#
+# See docs/kernel-audits/funkey-s/. What has NOT happened is somebody watching
+# it run, which is the bar slot 1 above is still waiting on. It is listed
+# anyway, because the person who reported it cannot verify it while the
+# launcher refuses to load anything - and they are the one console that can.
+4.14.14-funkey #1 SMP Sun Jan 18 03:45:29 CET 2026|smp
+
 # The console this port was developed on: a custom build, uniprocessor.
 4.14.14-funkey #1 Thu Jun 18 07:57:19 CEST 2026|up
